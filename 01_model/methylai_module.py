@@ -105,7 +105,7 @@ class MultiscaleConvBlock(nn.Module):
         # output
         y1 = self.basic_block(input_x)
         y2 = self.activation_function(y1 + shortcut)
-        # multiscale
+        # concat multiscale feature map
         num_batch, num_row, num_col = y2.shape
         crop_x = self.crop_layer(crop_x, num_col)
         y3 = torch.concatenate([y2, crop_x], dim=-2)

@@ -3,9 +3,9 @@ from  methylai_module import InputBlock, MultiscaleConvBlock, OutputBlock
 
 
 class MethlyAI(nn.Module):
-    def __init__(self, methylai_parameter_dict: dict):
+    def __init__(self, methylai_parameter_dict: dict = None):
         super().__init__()
-        # 默认参数
+        # default parameter
         if not methylai_parameter_dict:
             methylai_parameter_dict = {
             'input_block_channel': [20, 190, 30],
@@ -18,11 +18,13 @@ class MethlyAI(nn.Module):
             'stride': [4, 4, 4, 4, 4, 2],
             'output_block_dims': (1574 * 5, 1574 * 5),
             }
-        # 检查参数长度，防止看错
-        block_number = len(methylai_parameter_dict['width'])
-        assert block_number == len(methylai_parameter_dict['depth'])
-        assert block_number == len(methylai_parameter_dict['kernel_size'])
-        assert block_number == len(methylai_parameter_dict['stride'])
+        # check the length of parameter
+        assert len(methylai_parameter_dict['input_block_channel']) == 3
+        assert len(methylai_parameter_dict['input_block_kernel_size']) == 3
+        body_block_length = len(methylai_parameter_dict['width'])
+        assert len(methylai_parameter_dict['depth']) == body_block_length
+        assert len(methylai_parameter_dict['kernel_size']) == body_block_length
+        assert len(methylai_parameter_dict['stride']) == body_block_length
         # input block
         input_block_channel_list = methylai_parameter_dict['input_block_channel']
         input_block_kernel_size_list = methylai_parameter_dict['input_block_kernel_size']
@@ -39,7 +41,7 @@ class MethlyAI(nn.Module):
                 additional_conv_layers=input_block_additional_conv_layer,
                 exponential_activation=input_block_exponential_activation
         )
-        # body
+        # body parameters
         body_in_channels = sum(input_block_channel_list)
         body_block_list = []
         body_block_args = zip(
@@ -48,7 +50,7 @@ class MethlyAI(nn.Module):
             methylai_parameter_dict['kernel_size'],
             methylai_parameter_dict['stride'],
         )
-        # 通过for循环构建body
+        # for loop construct body
         for (block_width, block_depth, kernel_size, stride) in body_block_args:
             for block_index in range(block_depth):
                 body_block_list.append(
@@ -60,9 +62,8 @@ class MethlyAI(nn.Module):
                     )
                 )
                 body_in_channels = block_width
-        # for循环结束，构建body
         self.body = nn.Sequential(*body_block_list)
-        # flatten block，便于输出embedding
+        # flatten block
         self.flatten_block = nn.Sequential(
             nn.AdaptiveAvgPool1d(1),
             nn.Flatten(),
@@ -77,9 +78,9 @@ class MethlyAI(nn.Module):
     def forward(self, dna):
         y1 = self.input_block(dna)
         y2 = self.body(y1)
-        y3 = self.flatten_block(y2)
-        y4 = self.output_block(y3)
-        return y4
+        cpg_embedding = self.flatten_block(y2)
+        dna_methylation_level = self.output_block(cpg_embedding)
+        return dna_methylation_level
 
 
 
