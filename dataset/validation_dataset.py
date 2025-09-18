@@ -9,23 +9,22 @@ from ..utils.dna_sequence import dna_to_one_hot_tensor, get_reverse_complement
 class MethylAIValidationDataset(Dataset):
     def __init__(self, dataset_file, genome_fasta_file, model_input_dna_length: int,
                  minimal_coverage=5, loss_weight_factor=10.0, max_loss_weight_factor=1.0,
-                 keep_smooth_methylation=True, keep_raw_methylation=True, keep_window_methylation=True,
-                 reverse_complement_augmentation=False):
+                 is_keep_smooth_methylation=True, is_keep_raw_methylation=True, is_keep_window_methylation=True,
+                 is_reverse_complement_augmentation=True):
         # 读取dataframe
         self.dataset_file = dataset_file
         self.dataset_df = pd.DataFrame()
         self.model_input_dna_length = model_input_dna_length
         self._input_dataset()
-        self.dataset_df_length = len(self.dataset_df)
         self.genome_fasta = GenomeFasta(genome_fasta_file)
         self.minimal_coverage = minimal_coverage
         self.loss_weight_factor = loss_weight_factor
         self.max_loss_weight_factor = max_loss_weight_factor
-        self.keep_raw_methylation = keep_raw_methylation
-        self.keep_smooth_methylation = keep_smooth_methylation
-        self.keep_window_methylation = keep_window_methylation
-        assert (self.keep_raw_methylation or self.keep_smooth_methylation or self.keep_window_methylation)
-        self.reverse_complement_augmentation = reverse_complement_augmentation
+        self.is_keep_raw_methylation = is_keep_raw_methylation
+        self.is_keep_smooth_methylation = is_keep_smooth_methylation
+        self.is_keep_window_methylation = is_keep_window_methylation
+        assert (self.is_keep_raw_methylation or self.is_keep_smooth_methylation or self.is_keep_window_methylation)
+        self.is_reverse_complement_augmentation = is_reverse_complement_augmentation
         # 需要infer的数值
         self.smooth_methylation_col_index = [0]
         self.raw_methylation_col_index = [0]
@@ -34,10 +33,10 @@ class MethylAIValidationDataset(Dataset):
         self._infer_col_index()
 
     def __len__(self):
-        return self.dataset_df_length
+        return len(self.dataset_df)
 
     def __getitem__(self, idx):
-        if self.reverse_complement_augmentation:
+        if self.is_reverse_complement_augmentation:
             forward_dna_one_hot_tensor = self.get_dna_one_hot_tensor(idx, is_reverse_compliment=False)
             reverse_dna_one_hot_tensor = self.get_dna_one_hot_tensor(idx, is_reverse_compliment=True)
             target_tensor, loss_weight_tensor = self.get_predict_target_and_loss_weight(idx)
@@ -48,6 +47,7 @@ class MethylAIValidationDataset(Dataset):
             return forward_dna_one_hot_tensor, target_tensor, loss_weight_tensor
 
     def _input_dataset(self):
+        print(f'input dataset: {self.dataset_file}')
         if self.dataset_file.endswith('pkl'):
             self.dataset_df = pd.read_pickle(self.dataset_file)
         elif self.dataset_file.endswith('txt'):
@@ -80,7 +80,7 @@ class MethylAIValidationDataset(Dataset):
         coverage_col_len = len(self.coverage_col_index)
         assert len(self.raw_methylation_col_index) == coverage_col_len
         assert len(self.smooth_methylation_col_index) == coverage_col_len
-        assert len(self.window_methylation_col_index) // coverage_col_len == 0
+        assert (len(self.window_methylation_col_index) % coverage_col_len) == 0
 
     def get_dna_one_hot_tensor(self, idx, is_reverse_compliment: bool):
         chr_number = self.dataset_df.loc[idx, 'chr']
@@ -124,25 +124,25 @@ class MethylAIValidationDataset(Dataset):
         loss_weight_numpy_3[window_methylation_numpy == -1] = 0
         loss_weight_tensor_3 = torch.tensor(loss_weight_numpy_3, dtype=torch.float)
         # cat loss weight
-        if self.keep_smooth_methylation and self.keep_raw_methylation and self.keep_window_methylation:
+        if self.is_keep_smooth_methylation and self.is_keep_raw_methylation and self.is_keep_window_methylation:
             target_tensor = torch.cat([smooth_methylation_tensor, raw_methylation_tensor, window_methylation_tensor], dim=-1)
             loss_weight_tensor = torch.cat([loss_weight_tensor_1, loss_weight_tensor_2, loss_weight_tensor_3], dim=-1)
-        elif self.keep_smooth_methylation and self.keep_raw_methylation:
+        elif self.is_keep_smooth_methylation and self.is_keep_raw_methylation:
             target_tensor = torch.cat([smooth_methylation_tensor, raw_methylation_tensor], dim=-1)
             loss_weight_tensor = torch.cat([loss_weight_tensor_1, loss_weight_tensor_2], dim=-1)
-        elif self.keep_smooth_methylation and self.keep_window_methylation:
+        elif self.is_keep_smooth_methylation and self.is_keep_window_methylation:
             target_tensor = torch.cat([smooth_methylation_tensor, window_methylation_tensor], dim=-1)
             loss_weight_tensor = torch.cat([loss_weight_tensor_1, loss_weight_tensor_3], dim=-1)
-        elif self.keep_raw_methylation and self.keep_window_methylation:
+        elif self.is_keep_raw_methylation and self.is_keep_window_methylation:
             target_tensor = torch.cat([raw_methylation_tensor, window_methylation_tensor], dim=-1)
             loss_weight_tensor = torch.cat([loss_weight_tensor_2, loss_weight_tensor_3], dim=-1)
-        elif self.keep_smooth_methylation:
+        elif self.is_keep_smooth_methylation:
             target_tensor = smooth_methylation_tensor
             loss_weight_tensor = loss_weight_numpy_1
-        elif self.keep_raw_methylation:
+        elif self.is_keep_raw_methylation:
             target_tensor = raw_methylation_tensor
             loss_weight_tensor = loss_weight_numpy_2
-        elif self.keep_window_methylation:
+        elif self.is_keep_window_methylation:
             target_tensor = window_methylation_tensor
             loss_weight_tensor = loss_weight_numpy_3
         return target_tensor, loss_weight_tensor

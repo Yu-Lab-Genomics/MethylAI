@@ -1,5 +1,10 @@
+import os
+import sys
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 import torch.nn as nn
-from  methylai_module import InputBlock, MultiscaleConvBlock, OutputBlock
+from methylai_module import InputBlock, MultiscaleConvBlock, OutputBlock
 
 
 class MethlyAI(nn.Module):
@@ -8,15 +13,15 @@ class MethlyAI(nn.Module):
         # default parameter
         if not methylai_parameter_dict:
             methylai_parameter_dict = {
-            'input_block_channel': [20, 190, 30],
-            'input_block_kernel_size': [3, 9, 21],
-            'input_block_additional_conv_layer': (9, 9),
-            'input_block_exponential_activation': True,
-            'width': [300, 360, 420, 480, 540, 600],
-            'depth': [2, 2, 2, 2, 2, 2],
-            'kernel_size': [9, 9, 9, 9, 9, 9],
-            'stride': [4, 4, 4, 4, 4, 2],
-            'output_block_dims': (1574 * 5, 1574 * 5),
+                'input_block_channel': [20, 190, 30],
+                'input_block_kernel_size': [3, 9, 21],
+                'input_block_additional_conv_layer': (9, 9),
+                'input_block_exponential_activation': True,
+                'width': [300, 360, 420, 480, 540, 600],
+                'depth': [2, 2, 2, 2, 2, 2],
+                'kernel_size': [9, 9, 9, 9, 9, 9],
+                'stride': [4, 4, 4, 4, 4, 2],
+                'output_block_dims': (1574 * 5, 1574 * 5),
             }
         # check the length of parameter
         assert len(methylai_parameter_dict['input_block_channel']) == 3
@@ -75,12 +80,15 @@ class MethlyAI(nn.Module):
             input_dim=output_block_input_dim, output_dims_tuple=output_block_dims
         )
 
-    def forward(self, dna):
+    def forward(self, dna, is_return_cpg_embedding: bool = False):
         y1 = self.input_block(dna)
         y2 = self.body(y1)
         cpg_embedding = self.flatten_block(y2)
         dna_methylation_level = self.output_block(cpg_embedding)
-        return dna_methylation_level
+        if is_return_cpg_embedding:
+            return cpg_embedding, dna_methylation_level
+        else:
+            return dna_methylation_level
 
 
 

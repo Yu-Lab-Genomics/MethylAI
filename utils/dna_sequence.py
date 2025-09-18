@@ -1,11 +1,7 @@
 import torch
 
+# Convert a DNA sequence to one hot encoding.
 def dna_to_one_hot_tensor(dna_sequence: str):
-    # Convert a DNA sequence to one hot encoding.
-    # Args:
-    #     dna_sequence (str): The input DNA sequence.
-    # Returns:
-    #     list: A list of one-hot-encoded DNA sequences.
     # Define the mapping of bases to one hot encoding
     base_to_one_hot = {
         'A': [1, 0, 0, 0],
@@ -21,9 +17,8 @@ def dna_to_one_hot_tensor(dna_sequence: str):
     for base in dna_sequence:
         one_hot = base_to_one_hot.get(base, [0, 0, 0, 0])
         one_hot_sequences.append(one_hot)
-    # 改为tensor格式
+    # list to tensor
     one_hot_sequences_tensor = torch.tensor(one_hot_sequences, dtype=torch.float)
-    # 转置
     one_hot_sequences_tensor = one_hot_sequences_tensor.T
     return one_hot_sequences_tensor
 
