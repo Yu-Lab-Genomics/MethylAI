@@ -20,15 +20,15 @@ class GenomeFasta:
             fa_value = ''.join(file_line.split('\n')[1:])
             self.chr_to_dna_dict[chr_key] = fa_value
 
-    # start, end should be in bed format
-    def get_sequence_tuple(self, chr_number: str, start: int, end: int, upper_sequence: bool = True):
+    # chr, start, end should be in bed format
+    def get_sequence_tuple(self, chr: str, start: int, end: int, upper_sequence: bool = True):
         # header of fasta file format
-        fa_header = '_'.join([chr_number, str(start), str(end)])
+        fa_header = '_'.join([chr, str(start), str(end)])
         # check start position
         if start < 0:
             fa_header = fa_header + "(start_position_smaller_than_0)"
         # check end position
-        chr_fa = self.chr_to_dna_dict[chr_number]
+        chr_fa = self.chr_to_dna_dict[chr]
         chr_fa_length = len(chr_fa)
         if end > chr_fa_length:
             fa_header = fa_header + "(end_position_bigger_than_" + str(chr_fa_length) + ")"
@@ -57,28 +57,3 @@ class GenomeFasta:
         fa_sequence = fa_header + "\t" + sequence + "\n"
         return fa_sequence
 
-
-# test this class
-def test_genome_fasta():
-    os.chdir('/home/chenfaming/genome/ucsc_hg38')
-    file_name = 'hg38.fa'
-    genome_fasta_file = GenomeFasta(file_name)
-    chr_number = 'chr1'
-    start_position = 51631
-    end_position = 51631 + 2
-    fa_sequence = genome_fasta_file.get_fa_sequence_with_chr_start_end(chr_number, start_position, end_position)
-    print(fa_sequence)
-
-def test_genome_fasta_hg19():
-    os.chdir('/home/chenfaming/genome/ucsc_hg19')
-    file_name = 'hg19.fa'
-    genome_fasta_file = GenomeFasta(file_name)
-    chr_number = 'chr1'
-    start_position = 10643
-    end_position = 10643 + 3
-    fa_sequence = genome_fasta_file.get_fa_sequence_with_chr_start_end(chr_number, start_position, end_position)
-    print(fa_sequence)
-
-if __name__ == '__main__':
-    # test_genome_fasta()
-    test_genome_fasta_hg19()
