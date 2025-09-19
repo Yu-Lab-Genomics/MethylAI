@@ -7,10 +7,10 @@ from ..utils.dna_sequence import dna_to_one_hot_tensor, get_reverse_complement
 
 
 class MethylAIValidationDataset(Dataset):
-    def __init__(self, dataset_file, genome_fasta_file, model_input_dna_length: int,
-                 minimal_coverage=5, loss_weight_factor=10.0, max_loss_weight_factor=1.0,
-                 is_keep_smooth_methylation=True, is_keep_raw_methylation=True, is_keep_window_methylation=True,
-                 is_reverse_complement_augmentation=True):
+    def __init__(self, dataset_file: str, genome_fasta_file: str, model_input_dna_length: int,
+                 minimal_coverage: int = 5, loss_weight_factor: float = 5.0, max_loss_weight_factor: float = 1.0,
+                 is_keep_smooth_methylation: bool = True, is_keep_raw_methylation: bool = True,
+                 is_keep_window_methylation: bool = True, is_reverse_complement_augmentation: bool = True):
         # 读取dataframe
         self.dataset_file = dataset_file
         self.dataset_df = pd.DataFrame()
@@ -20,12 +20,12 @@ class MethylAIValidationDataset(Dataset):
         self.minimal_coverage = minimal_coverage
         self.loss_weight_factor = loss_weight_factor
         self.max_loss_weight_factor = max_loss_weight_factor
-        self.is_keep_raw_methylation = is_keep_raw_methylation
         self.is_keep_smooth_methylation = is_keep_smooth_methylation
+        self.is_keep_raw_methylation = is_keep_raw_methylation
         self.is_keep_window_methylation = is_keep_window_methylation
         assert (self.is_keep_raw_methylation or self.is_keep_smooth_methylation or self.is_keep_window_methylation)
         self.is_reverse_complement_augmentation = is_reverse_complement_augmentation
-        # 需要infer的数值
+        # col_index
         self.smooth_methylation_col_index = [0]
         self.raw_methylation_col_index = [0]
         self.coverage_col_index = [0]
@@ -83,12 +83,12 @@ class MethylAIValidationDataset(Dataset):
         assert (len(self.window_methylation_col_index) % coverage_col_len) == 0
 
     def get_dna_one_hot_tensor(self, idx, is_reverse_compliment: bool):
-        chr_number = self.dataset_df.loc[idx, 'chr']
+        chr = self.dataset_df.loc[idx, 'chr']
         dna_start_position = self.dataset_df.loc[idx, 'input_dna_start']
         dna_end_position = self.dataset_df.loc[idx, 'input_dna_end']
         # upper_sequence=True使获取的DNA序列全部为大写字母
         dna_sequence = self.genome_fasta.get_sequence_tuple(
-            chr_number, dna_start_position, dna_end_position, upper_sequence=True
+            chr, dna_start_position, dna_end_position, upper_sequence=True
         )[1]
         if is_reverse_compliment:
             dna_sequence = get_reverse_complement(dna_sequence)

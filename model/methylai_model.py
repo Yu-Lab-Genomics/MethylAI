@@ -1,9 +1,9 @@
+import torch.nn as nn
 import os
 import sys
 current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
-import torch.nn as nn
 from methylai_module import InputBlock, MultiscaleConvBlock, OutputBlock
 
 
@@ -89,11 +89,6 @@ class MethlyAI(nn.Module):
             return cpg_embedding, dna_methylation_level
         else:
             return dna_methylation_level
-
-
-
-
-
 
 
 
