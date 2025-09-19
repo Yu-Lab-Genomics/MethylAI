@@ -15,13 +15,13 @@ MethyAI is implemented based on Pytorch. We use pytorch-2.4.1 and cuda-12.8. Oth
 2.  **Create the environment:** Navigate to the root directory of this repository in your terminal or Anaconda Prompt. Then, execute the following command to create the CAPTAIN environment:
 
     ```bash
-    conda env create -n methyAI
+    conda env create -n methyai
     ```
 
 3.  **Activate the environment:** Once the environment is created, activate it using the following command:
 
     ```bash
-    conda activate captain
+    conda activate methyai
     ```
 4.  **Install requried packages:** We have included a `requirements.txt` file. This file lists the necessary Python packages required to run the model:
 
