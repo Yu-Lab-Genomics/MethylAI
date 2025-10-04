@@ -1,11 +1,11 @@
-# MethylAI: A Deep Learning Model for Predicting DNA Methylation from DNA Sequence
+# MethylAI: A Deep Learning Model for Predicting and Interpreting DNA Methylation from DNA Sequence
 
 [![license](https://img.shields.io/badge/python_-3.10.15_-brightgreen)](https://www.python.org/)
 [![license](https://img.shields.io/badge/PyTorch_-2.4.1_-orange)](https://pytorch.org/)
 [![license](https://img.shields.io/badge/Captum_-0.6.8_-purple)](https://captum.ai/)
 [![license](https://img.shields.io/badge/R_-4.3.3_-red)](https://www.r-project.org/)
 
-MethylAI is a convolutional neural network (CNN) model designed to predict DNA methylation levels at CpG sites and genomic regions directly from one-hot encoded DNA sequences centered on the target CpG sites. Beyond accurate prediction, MethylAI is engineered for interpretability to uncover the biological mechanisms underlying DNA methylation regulation.
+MethylAI is a convolutional neural network (CNN) based model that predicts DNA methylation levels at CpG sites from one-hot encoded DNA sequences. MethylAI was trained on the most comprehensive multi-species WGBS dataset, including 1,574 human samples across 51 tissues and pre-training dataset from 11 mammals. The model leverages a multi-scale CNN architecture and exponential activations for high accuracy and improved interpretability. Its key applications include decoding the cis-regulatory logic of methylation via integration with DeepSHAP and predicting the impact of genetic variants on methylation landscapes.
 
 ## Key Features & Highlights
 
@@ -19,7 +19,7 @@ MethylAI is a convolutional neural network (CNN) model designed to predict DNA m
 
 **Multi-scale CNN Module:** Captures sequence features at varying resolutions to improve predictive accuracy.
 
-**Exponential Activation Function:** Increases model interpretability by providing more biologically meaningful intermediate representations.
+**Exponential Activation Function:** Increases model interpretability by improving representations of genomic sequence motifs ([ref](https://www.nature.com/articles/s42256-020-00291-x)).
 
 ### Sophisticated Training Strategy
 
@@ -31,20 +31,33 @@ MethylAI is a convolutional neural network (CNN) model designed to predict DNA m
 
 - average methylation levels over genomic regions of different lengths (200 bp, 500 bp, and 1 kb).
 
+---
 
-## Main Applications
+## Downstream Applications
 
-MethylAI can be leveraged for advanced functional genomics analyses:
+MethylAI enables a wide range of functional genomics analyses:
+
+### Genome-wide Methylation Level Prediction:
+
+Predict the DNA methylation level for any input DNA sequence across all 1,574 human samples, providing a comprehensive methylation profile.
 
 ### Identification of Cis-Regulatory Elements:
 
-Integrated with the DeepSHAP algorithm, MethylAI can identify key sequence features (e.g., transcription factor binding motifs) that influence DNA methylation levels, providing insights into the cis-regulatory code of DNA methylation.
+Integrated with the DeepSHAP algorithm, MethylAI can quantify the contribution of each nucleotide to the methylation prediction. This allows for the identification of key sequence features, such as transcription factor binding motifs, that drive methylation changes.
 
-### Predicting the Regulatory Impact of Genetic Variants:
+### Interpreting Disease-Associated Genetic Variants:
 
-By introducing sequence variations in silico, MethylAI can predict the effect of genetic variants (e.g., SNPs) or allelic differences on local DNA methylation patterns, aiding in the functional interpretation of non-coding genomic variants.
+MethylAI can predict the impact of disease-associated genetic variants (e.g., SNPs) on DNA methylation patterns. This capability provides mechanistic insights into how non-coding genetic variations may contribute to disease pathogenesis by altering the epigenetic landscape.
 
-## Installation Guide
+---
+
+## Usage
+
+This section provides a step-by-step guide to installing MethylAI and running its core functionalities.
+
+### Installation
+
+We recommend using [Conda](https://www.anaconda.com/) to manage the environment.
 
 #### Step 1: Clone the Repository
 
@@ -53,11 +66,14 @@ git clone https://github.com/Yu-Lab-Genomics/MethylAI.git
 cd MethylAI
 ```
 
-#### Step 2: Create Environment and Install Dependencies
+#### Step 2: Create Conda Environment and Install Dependencies
 
 ```bash
+# Create and activate the conda environment
 conda create -n methylai python=3.10
 conda activate methylai
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
@@ -73,9 +89,13 @@ You can download the pretrained model checkpoints below. Place the downloaded mo
 
 - [Human DNA methylation atlas model](https://sctp4m.aigenomicsyulab.com/): 207 human samples from a [nature paper](https://www.nature.com/articles/s41586-022-05580-6)
 
-## Demo
+---
 
-### Run the Inference Pipeline
+### Quick Start: Model Inference Demo
+
+Run a quick demo to ensure your installation is correct. This will predict methylation levels for a set of example DNA sequences.
+
+#### Run the Inference Pipeline
 
 ```bash
 python ./04.scPIT_inference/scPIT_inference.py --gpu 5 \
@@ -87,29 +107,95 @@ Arguments:
 --gpu: ID of the GPU to use. Default is GPU 5.  
 --model_ckpt: Path to the trained scPIT model checkpoint (already provided in ./02.checkpoint/).  
 
-### Expected Output
+#### Expected Output
 
+---
 
+### Fine-tuning Tutorial 1: Using a Public ENCODE Dataset
 
-## Fine-tuning with your WGBS-seq data
+This tutorial guides you through fine-tuning MethylAI on a public dataset.
 
+#### Step 1: Download and Preprocess Data
 
+```bash
+# Download a sample ENCODE WGBS dataset (e.g., from ENCSR000***)
+bash scripts/download_encode_data.sh
 
-### Data Pre-Processing & Dataset Splitting
+# Preprocess the data into the format required by MethylAI
+python scripts/preprocess_encode_data.py \
+  --input_bam data/encode_sample.bam \
+  --reference_genome hg38.fa \
+  --output_file data/encode_processed.h5
+```
 
-
-
-### Model Training
+#### Step 2: Fine-tune the Model
 
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,3 OMP_NUM_THREADS=4 nohup torchrun --standalone --nproc_per_node=gpu
 ```
 
-## Downstream Applications
+### Fine-tuning Tutorial 2: Using Your Own WGBS Dataset
 
-### Interpretability Analysis
+If you have your own WGBS data processed with Bismark, you can fine-tune MethylAI as follows.
 
-### Variants effect prediction
+Prerequisites:
 
+- Your data should be in a format including columns: chromosome, start, end, methylated_reads, total_reads.
 
+#### Step 1: Data Preprocessing
+
+```bash
+# Download a sample ENCODE WGBS dataset (e.g., from ENCSR000***)
+bash scripts/download_encode_data.sh
+
+# Preprocess the data into the format required by MethylAI
+python scripts/preprocess_encode_data.py \
+  --input_bam data/encode_sample.bam \
+  --reference_genome hg38.fa \
+  --output_file data/encode_processed.h5
+```
+
+#### Step 2: Fine-tune the Model
+
+```bash
+CUDA_VISIBLE_DEVICES=0,1,2,3 OMP_NUM_THREADS=4 nohup torchrun --standalone --nproc_per_node=gpu
+```
+
+---
+
+## Downstream Analysis
+
+#### Decoding Cis-Regulatory Logic with DeepSHAP
+
+Identify key sequence motifs influencing methylation predictions.
+
+```bash
+python scripts/run_deepshap.py \
+  --model models/pretrained_model.h5 \
+  --input_fasta data/regions_of_interest.fa \
+  --output_dir results/deepshap/
+```
+
+This script will generate:
+
+- results/deepshap/contributions.tsv: Nucleotide-level contribution scores.
+- results/deepshap/motifs.html: An interactive visualization of identified motifs.
+
+#### Interpreting Disease-Associated Genetic Variants
+
+Predict the impact of a genetic variant (e.g., a SNP from GWAS) on DNA methylation.
+
+```bash
+python scripts/predict_variant_effect.py \
+  --model models/pretrained_model.h5 \
+  --reference_fasta data/reference_sequence.fa \
+  --variant_vcf data/disease_associated_variants.vcf \
+  --output_file results/variant_effects.tsv
+```
+
+The output will show the predicted change in methylation level for each variant, helping prioritize functionally relevant non-coding variants.
+
+## Citation
+
+If you use MethylAI in your research, please cite our preprint/publication (link to be added).
 
