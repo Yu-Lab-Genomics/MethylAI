@@ -1,19 +1,19 @@
-# MethylAI: A Deep Learning Model for Predicting and Interpreting DNA Methylation from DNA Sequence
+# MethylAI: A Deep Learning Model for Predicting and Interpreting DNA Methylation from genomic Sequence
 
 [![license](https://img.shields.io/badge/python_-3.10.15_-brightgreen)](https://www.python.org/)
 [![license](https://img.shields.io/badge/PyTorch_-2.4.1_-orange)](https://pytorch.org/)
 [![license](https://img.shields.io/badge/Captum_-0.6.8_-purple)](https://captum.ai/)
 [![license](https://img.shields.io/badge/R_-4.3.3_-red)](https://www.r-project.org/)
 
-MethylAI is a convolutional neural network (CNN) based model that predicts DNA methylation levels at CpG sites from one-hot encoded DNA sequences. MethylAI was trained on the most comprehensive multi-species WGBS dataset, including 1,574 human samples across 51 tissues and pre-training dataset from 11 mammals. The model leverages a multi-scale CNN architecture and exponential activations for high accuracy and improved interpretability. Its key applications include decoding the cis-regulatory logic of methylation via integration with DeepSHAP and predicting the impact of genetic variants on methylation landscapes.
+MethylAI is a convolutional neural network (CNN) based model that predicts DNA methylation levels at CpG sites from one-hot encoded DNA sequences. MethylAI was pre-trained on the most comprehensive multi-species WGBS dataset, including 1,574 human samples across 52 tissues and other 11 mammals. The model leverages a multi-scale CNN architecture and exponential activations for high accuracy and improved interpretability. Its key applications include decoding the cis-regulatory logic of DNA methylation via integration with [DeepSHAP](https://github.com/shap/shap) and predicting the impact of genetic variants on methylation landscapes.
 
 ## Key Features & Highlights
 
 ### Comprehensive and Multi-Species Training Data
 
-**Largest Human WGBS Dataset:** Trained on the most extensive collection of human whole-genome bisulfite sequencing (WGBS) data to date, comprising 1,574 samples spanning 52 tissues and 171 cell types.
+**Largest Human WGBS Dataset:** Trained on the most extensive collection of human whole-genome bisulfite sequencing (WGBS) data to date, comprising 1,574 samples spanning 52 tissues and 238 cell types.
 
-**Cross-Species Pre-training:** Enhanced model accuracy through pre-training on WGBS data from **11 mammalian species**, including mouse (*Mus musculus*), rat (*Rattus norvegicus*), macaque (*Macaca fascicularis* and *Macaca mulatta*), chimpanzee (*Pan troglodytes*), gorilla (*Gorilla gorilla*), cow (*Bos taurus*), sheep (*Ovis aries*), dog (*Canis lupus familiaris*), pig (*Sus scrofa*), giant panda (*Ailuropoda melanoleuca*).
+**Cross-Species Pre-training:** Enhanced model accuracy through pre-training on WGBS data from human and **11 mammalian species**, including mouse (*Mus musculus*), rat (*Rattus norvegicus*), macaque (*Macaca fascicularis* and *Macaca mulatta*), chimpanzee (*Pan troglodytes*), gorilla (*Gorilla gorilla*), cow (*Bos taurus*), sheep (*Ovis aries*), dog (*Canis lupus familiaris*), pig (*Sus scrofa*), giant panda (*Ailuropoda melanoleuca*).
 
 ### Advanced Model Architecture
 
@@ -27,7 +27,7 @@ MethylAI is a convolutional neural network (CNN) based model that predicts DNA m
 
 **Multi-task Prediction:** Simultaneously predicts methylation levels for the 1,574 human samples:
 
-- at each CpG site,
+- at each CpG site (raw and smoothed site methylation level)
 
 - average methylation levels over genomic regions of different lengths (200 bp, 500 bp, and 1 kb).
 
@@ -37,17 +37,17 @@ MethylAI is a convolutional neural network (CNN) based model that predicts DNA m
 
 MethylAI enables a wide range of functional genomics analyses:
 
-### Genome-wide Methylation Level Prediction:
+### Genome-wide DNA methylation Prediction:
 
 Predict the DNA methylation level for any input DNA sequence across all 1,574 human samples, providing a comprehensive methylation profile.
 
-### Identification of Cis-Regulatory Elements:
+### Identification of DNA methylation linked active motifs:
 
 Integrated with the DeepSHAP algorithm, MethylAI can quantify the contribution of each nucleotide to the methylation prediction. This allows for the identification of key sequence features, such as transcription factor binding motifs, that drive methylation changes.
 
-### Interpreting Disease-Associated Genetic Variants:
+### Interpreting GWAS Variants:
 
-MethylAI can predict the impact of disease-associated genetic variants (e.g., SNPs) on DNA methylation patterns. This capability provides mechanistic insights into how non-coding genetic variations may contribute to disease pathogenesis by altering the epigenetic landscape.
+MethylAI can predict the impact of traits/disease-associated genetic variants on DNA methylation patterns. This capability provides mechanistic insights into how non-coding genetic variations may contribute to disease pathogenesis by altering the epigenetic landscape.
 
 ---
 
@@ -70,7 +70,7 @@ cd MethylAI
 
 ```bash
 # Create and activate the conda environment
-conda create -n methylai python=3.10
+conda create -n methylai python=3.11 mamba
 conda activate methylai
 
 # Install dependencies
@@ -79,15 +79,15 @@ pip install -r requirements.txt
 
 #### Step 3: Download model checkpoints
 
-You can download the pretrained model checkpoints below. Place the downloaded model directory in the main path
+You can download the pretrained model checkpoints below. Please download these files to the checkpoint folder to ensure our sample code runs smoothly.
 
-- [Pretrained Model](https://sctp4m.aigenomicsyulab.com/): pretrained with human dataset and other 11 mammalian species
+- [Pre-trained model](https://methylai.aigenomicsyulab.com/): pre-trained with human dataset and other 11 mammalian species
 
-- [Full model](https://sctp4m.aigenomicsyulab.com/): 1574 human samples
+- [Fine-tuned model](https://methylai.aigenomicsyulab.com/): fine-tuned model with 1574 human samples
 
-- [ENCODE model](https://sctp4m.aigenomicsyulab.com/): 96 human samples from [ENCODE project](https://www.encodeproject.org/matrix/?type=Experiment&control_type!=*&status=released&perturbed=false&assay_title=WGBS&replicates.library.biosample.donor.organism.scientific_name=Homo+sapiens) (127 samples were available from ENCODE project, but only 96 samples passed our quality control)
+- [ENCODE model](https://methylai.aigenomicsyulab.com/): fine-tuned model with 96 human samples from [ENCODE project](https://www.encodeproject.org/matrix/?type=Experiment&control_type!=*&status=released&perturbed=false&assay_title=WGBS&replicates.library.biosample.donor.organism.scientific_name=Homo+sapiens) (127 samples were available from ENCODE project, 96 samples passed our quality control)
 
-- [Human DNA methylation atlas model](https://sctp4m.aigenomicsyulab.com/): 207 human samples from a [nature paper](https://www.nature.com/articles/s41586-022-05580-6)
+- [Human cell tyep dataset model](https://methylai.aigenomicsyulab.com/): fine-tuned model with 207 human samples from a [nature paper](https://www.nature.com/articles/s41586-022-05580-6)
 
 ---
 
