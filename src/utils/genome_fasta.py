@@ -20,7 +20,6 @@ class GenomeFasta:
             fa_value = ''.join(file_line.split('\n')[1:])
             self.chr_to_dna_dict[chr_key] = fa_value
 
-    # chr, start, end should be in bed format
     def get_sequence_tuple(self, chr: str, start: int, end: int, upper_sequence: bool = True):
         # header of fasta file format
         fa_header = '_'.join([chr, str(start), str(end)])

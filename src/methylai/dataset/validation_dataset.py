@@ -26,10 +26,10 @@ class MethylAIValidationDataset(Dataset):
         assert (self.is_keep_raw_methylation or self.is_keep_smooth_methylation or self.is_keep_window_methylation)
         self.is_reverse_complement_augmentation = is_reverse_complement_augmentation
         # col_index
-        self.smooth_methylation_col_index = [0]
-        self.raw_methylation_col_index = [0]
-        self.coverage_col_index = [0]
-        self.window_methylation_col_index = [0]
+        self.smooth_methylation_col_index = []
+        self.raw_methylation_col_index = []
+        self.coverage_col_index = []
+        self.window_methylation_col_index = []
         self._infer_col_index()
 
     def __len__(self):
@@ -37,13 +37,13 @@ class MethylAIValidationDataset(Dataset):
 
     def __getitem__(self, idx):
         if self.is_reverse_complement_augmentation:
-            forward_dna_one_hot_tensor = self.get_dna_one_hot_tensor(idx, is_reverse_compliment=False)
-            reverse_dna_one_hot_tensor = self.get_dna_one_hot_tensor(idx, is_reverse_compliment=True)
-            target_tensor, loss_weight_tensor = self.get_predict_target_and_loss_weight(idx)
+            forward_dna_one_hot_tensor = self._get_dna_one_hot_tensor(idx, is_reverse_compliment=False)
+            reverse_dna_one_hot_tensor = self._get_dna_one_hot_tensor(idx, is_reverse_compliment=True)
+            target_tensor, loss_weight_tensor = self._get_predict_target_and_loss_weight(idx)
             return forward_dna_one_hot_tensor, reverse_dna_one_hot_tensor, target_tensor, loss_weight_tensor
         else:
-            forward_dna_one_hot_tensor = self.get_dna_one_hot_tensor(idx, is_reverse_compliment=False)
-            target_tensor, loss_weight_tensor = self.get_predict_target_and_loss_weight(idx)
+            forward_dna_one_hot_tensor = self._get_dna_one_hot_tensor(idx, is_reverse_compliment=False)
+            target_tensor, loss_weight_tensor = self._get_predict_target_and_loss_weight(idx)
             return forward_dna_one_hot_tensor, target_tensor, loss_weight_tensor
 
     def _input_dataset(self):
@@ -62,7 +62,7 @@ class MethylAIValidationDataset(Dataset):
         self.dataset_df.loc[:, 'input_dna_end'] = self.dataset_df.loc[:, 'end'] - cg_extent_length + model_extent_length
 
     def get_dataset_df(self):
-        return self.dataset_df.copy()
+        return self.dataset_df
 
     def _infer_col_index(self):
         self.coverage_col_index = [
@@ -80,9 +80,8 @@ class MethylAIValidationDataset(Dataset):
         coverage_col_len = len(self.coverage_col_index)
         assert len(self.raw_methylation_col_index) == coverage_col_len
         assert len(self.smooth_methylation_col_index) == coverage_col_len
-        assert (len(self.window_methylation_col_index) % coverage_col_len) == 0
 
-    def get_dna_one_hot_tensor(self, idx, is_reverse_compliment: bool):
+    def _get_dna_one_hot_tensor(self, idx, is_reverse_compliment: bool):
         chr = self.dataset_df.loc[idx, 'chr']
         dna_start_position = self.dataset_df.loc[idx, 'input_dna_start']
         dna_end_position = self.dataset_df.loc[idx, 'input_dna_end']
@@ -95,7 +94,7 @@ class MethylAIValidationDataset(Dataset):
         dna_one_hot_tensor = dna_to_one_hot_tensor(dna_sequence)
         return dna_one_hot_tensor
 
-    def get_predict_target_and_loss_weight(self, idx):
+    def _get_predict_target_and_loss_weight(self, idx):
         # 预测target和损失权重
         smooth_methylation_numpy = self.dataset_df.iloc[idx, self.smooth_methylation_col_index].to_numpy(
             dtype=np.float32, copy=True)

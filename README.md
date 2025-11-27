@@ -83,11 +83,11 @@ You can download the pretrained model checkpoints below. Please download these f
 
 - [Pre-trained model](https://methylai.aigenomicsyulab.com/): pre-trained with human dataset and other 11 mammalian species
 
-- [Fine-tuned model](https://methylai.aigenomicsyulab.com/): fine-tuned model with 1574 human samples
+- [Fine-tuned model with complete human dataset](https://methylai.aigenomicsyulab.com/): 1574 human samples
 
-- [ENCODE model](https://methylai.aigenomicsyulab.com/): fine-tuned model with 96 human samples from [ENCODE project](https://www.encodeproject.org/matrix/?type=Experiment&control_type!=*&status=released&perturbed=false&assay_title=WGBS&replicates.library.biosample.donor.organism.scientific_name=Homo+sapiens) (127 samples were available from ENCODE project, 96 samples passed our quality control)
+- [Fine-tuned model with ENCODE dataset](https://methylai.aigenomicsyulab.com/): 96 human samples from [ENCODE project](https://www.encodeproject.org/matrix/?type=Experiment&control_type!=*&status=released&perturbed=false&assay_title=WGBS&replicates.library.biosample.donor.organism.scientific_name=Homo+sapiens) (127 samples were available from ENCODE project, 96 samples passed our quality control)
 
-- [Human cell tyep dataset model](https://methylai.aigenomicsyulab.com/): fine-tuned model with 207 human samples from a [nature paper](https://www.nature.com/articles/s41586-022-05580-6)
+- [Fine-tuned model with human cell type dataset](https://methylai.aigenomicsyulab.com/): 207 human samples from a [nature paper](https://www.nature.com/articles/s41586-022-05580-6)
 
 ---
 
@@ -197,5 +197,5 @@ The output will show the predicted change in methylation level for each variant,
 
 ## Citation
 
-If you use MethylAI in your research, please cite our preprint/publication (link to be added).
+If you use MethylAI in your research, please cite our [preprint](https://www.biorxiv.org/content/10.1101/2025.11.20.689274v1)/publication.
 
