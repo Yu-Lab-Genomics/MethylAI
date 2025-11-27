@@ -11,19 +11,19 @@ MethylAI is a convolutional neural network (CNN) based model that predicts DNA m
 
 ## Key Features & Highlights
 
-### Comprehensive and Multi-Species Training Data
+### 1. Comprehensive and Multi-Species Training Data
 
 **Largest Human WGBS Dataset:** Trained on the most extensive collection of human whole-genome bisulfite sequencing (WGBS) data to date, comprising 1,574 samples spanning 52 tissues and 238 cell types.
 
 **Cross-Species Pre-training:** Enhanced model accuracy through pre-training on WGBS data from **human** and **11 mammalian species**, including mouse (*Mus musculus*), rat (*Rattus norvegicus*), macaque (*Macaca fascicularis* and *Macaca mulatta*), chimpanzee (*Pan troglodytes*), gorilla (*Gorilla gorilla*), cow (*Bos taurus*), sheep (*Ovis aries*), dog (*Canis lupus familiaris*), pig (*Sus scrofa*), giant panda (*Ailuropoda melanoleuca*).
 
-### Advanced Model Architecture
+### 2. Advanced Model Architecture
 
 **Multi-scale CNN Module:** Captures sequence features at varying resolutions to improve predictive accuracy.
 
 **Exponential Activation Function:** Increases model interpretability by improving representations of genomic sequence motifs ([ref](https://www.nature.com/articles/s42256-020-00291-x)).
 
-### Sophisticated Training Strategy
+### 3. Sophisticated Training Strategy
 
 **Pre-training + Fine-tuning:** Leverages cross-species data for pre-training, followed by human-specific fine-tuning, resulting in superior prediction performance.
 
@@ -45,7 +45,7 @@ Predict the DNA methylation level for any input DNA sequence across all 1,574 hu
 
 ### Identification of DNA methylation linked active motifs:
 
-Integrated with the DeepSHAP algorithm, MethylAI can quantify the contribution of each nucleotide to the methylation prediction. This allows for the identification of key sequence features, such as transcription factor binding motifs, that drive methylation changes.
+Integrated with the DeepSHAP algorithm, MethylAI can quantify the contribution of each nucleotide to the methylation prediction. This allows for the identification of key sequence features, such as transcription factor (TF) binding motifs, that drive methylation changes.
 
 ### Interpreting GWAS Variants:
 
@@ -55,7 +55,7 @@ MethylAI can predict the impact of traits/disease-associated genetic variants on
 
 ## Preparation
 
-This section provides a step-by-step guide to installing MethylAI and running its core functionalities.
+This section provides the dependencies and data acquisition for MethylAI.
 
 ### Environment Setup
 
@@ -83,7 +83,7 @@ pip install -r requirements.txt
 
 #### 1. Download MethylAI Checkpoints
 
-You can download the pretrained model checkpoints below. Please download these files to the checkpoint folder to ensure our sample code runs smoothly.
+You can download the model checkpoints below. We recommend downloading the checkpoints to the `checkpoint` directory:
 
 - [Pre-trained model](https://methylai.aigenomicsyulab.com/): pre-trained with human dataset and other 11 mammalian species
 
@@ -98,63 +98,92 @@ You can download the pretrained model checkpoints below. Please download these f
 Obtain the reference genome for sequence extraction and coordinate mapping:
 
 ```bash
-wget -P data/reference/ https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz
+wget -P data/genome/ https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz
 gunzip data/reference/hg38.fa.gz
 ```
 
 #### 3. Download CpG Site Coordinates for hg38
 
-#### 4. Download ENCODE WGBS Datasets for Fine-tuning Tutorial 1
-
-#### 5. Download JASPAR Transcription Factor Binding Site
-
 ---
 
-### Quick Start: Model Inference Demo
+## Quick Start: Model Inference Demo
 
-Run a quick demo to ensure your installation is correct. This will predict methylation levels for a set of example DNA sequences.
+Run a quick demo to ensure your preparation is correct. This will predict methylation levels for a set of example DNA sequences.
 
-#### Run the Demo script
+### Run the Demo script
 
 ```bash
-python ./demo/demo.py --gpu 0 \
---model_ckpt ./checkpoint/methylAI_filetune_encode.pth \
---output_path ./demo/demo_output
+python demo/demo.py --gpu 0 \
+--model_ckpt checkpoint/methylAI_filetune_encode.pth \
+--output_path demo/demo_output
 ```
-
 Arguments:  
 --gpu: ID of the GPU to use. Default is GPU 5.  
---model_ckpt: Path to the trained scPIT model checkpoint (already provided in ./02.checkpoint/).  
+--model_ckpt: path to the fine-tuned model checkpoint  
 --output_path: 
 
-#### Expected Output
+### Expected Output
 
 ---
 
-### Fine-tuning Tutorial 1: Using a Public ENCODE Dataset
+## Fine-tuning Tutorial 1: Using a ENCODE Dataset
 
-This tutorial guides you through fine-tuning MethylAI on a public dataset.
+This tutorial guides you through fine-tuning MethylAI on a public ENCODE dataset.
 
-#### Step 1: Download and Preprocess Data
-
+### 1: Download ENCODE WGBS Data
 ```bash
-# Download a sample ENCODE WGBS dataset
-bash scripts/download_encode_data.sh
-
-# Preprocess the data into the format required by MethylAI
-python scripts/preprocess_encode_data.py \
-  --input_bam data/encode_sample.bam \
-  --reference_genome hg38.fa \
-  --output_file data/encode_processed.h5
+wget -c -P data/encode -i data/encode/encode_wgbs_link.txt
 ```
 
-#### Step 2: Fine-tune the Model
+### 2. Prepare train/validation/test dataset files
+#### 2.1. Preprocess Data
+Preprocessing to extract coverage and mc values from WGBS data.
+```bash
+python scripts/preprocess_encode_data.py \
+  --input_folder data/encode \
+  --output_folder data/encode_preprocessed \
+  --cpg_coordinate data/genome/cpg_coordinate_hg38.bed
+```
+**Arguments:**
+- `--input_folder`: Input directory with ENCODE WGBS datasets
+- `--output_folder`: Output directory for processed data
+- `--cpg_coordinate`: hg38 CpG coordinate BED file for methylation data integration
+
+#### 2.2. Obtain Raw and Smoothed Methylation Values
+The R script applies the bsmooth algorithm from the bsseq R package to generate both raw and smoothed methylation values for downstream analysis.
+```bash
+Rscript src/script/bsmooth_human_wgbs.R \
+  data/encode_preprocessed \
+  .preprocessed.txt \
+  64 \
+  sample_index.txt \
+  smoothed_methylation.txt.gz \
+  35 \
+  500
+```
+Arguments (positional):  
+`1`: Directory containing preprocessed ENCODE files (output from previous step)  
+`2`: Suffix pattern to identify preprocessed files (default: .preprocessed.txt)  
+`3`: Number of CPU cores to utilize for parallel processing (adjust based on available hardware)  
+`4`: Mapping file linking filenames to sample indices in the output  
+`5`: Output file containing both raw and smoothed methylation values (compressed)  
+`6`: Minimum coverage threshold for methylation calling (bsmooth parameter)  
+`7`: Smoothing window size for the loess regression (bsmooth parameter)
+
+#### 2.3. Generate train/validation/test dataset files
+```bash
+python scripts/generate_dataset_files.py \
+  --smoothed_methylation_file data/encode_preprocessed/smoothed_methylation.txt.gz \
+  --output_folder data/encode_dataset
+```
+
+### 2: Fine-tune the Model
 
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,3 OMP_NUM_THREADS=4 nohup torchrun --standalone --nproc_per_node=gpu
 ```
 
-### Fine-tuning Tutorial 2: Using Your Own WGBS Dataset
+## Fine-tuning Tutorial 2: Using Your Own WGBS Dataset
 
 If you have your own WGBS data processed with Bismark, you can fine-tune MethylAI as follows.
 
@@ -162,7 +191,7 @@ Prerequisites:
 
 - Your data should be in a format including columns: chromosome, start, end, methylated_reads, total_reads.
 
-#### Step 1: Data Preprocessing
+### 1. Data Preprocessing
 
 ```bash
 # Download a sample ENCODE WGBS dataset (e.g., from ENCSR000***)
@@ -175,7 +204,7 @@ python scripts/preprocess_encode_data.py \
   --output_file data/encode_processed.h5
 ```
 
-#### Step 2: Fine-tune the Model
+### 2. Fine-tune the Model
 
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,3 OMP_NUM_THREADS=4 nohup torchrun --standalone --nproc_per_node=gpu
@@ -185,9 +214,9 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 OMP_NUM_THREADS=4 nohup torchrun --standalone --npr
 
 ## Downstream Analysis
 
-#### Decoding Cis-Regulatory Logic with DeepSHAP
+### 1. Decoding Cis-Regulatory Logic with DeepSHAP
 
-Identify key sequence motifs influencing methylation predictions.
+Identify DNA methylation linked TF motifs.
 
 ```bash
 python scripts/run_deepshap.py \
@@ -201,9 +230,9 @@ This script will generate:
 - results/deepshap/contributions.tsv: Nucleotide-level contribution scores.
 - results/deepshap/motifs.html: An interactive visualization of identified motifs.
 
-#### Interpreting Disease-Associated Genetic Variants
+### 2. Interpreting GWAS Variants
 
-Predict the impact of a genetic variant (e.g., a SNP from GWAS) on DNA methylation.
+Predict the impact of genetic variants on DNA methylation.
 
 ```bash
 python scripts/predict_variant_effect.py \
