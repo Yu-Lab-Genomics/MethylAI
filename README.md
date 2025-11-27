@@ -5,6 +5,8 @@
 [![license](https://img.shields.io/badge/Captum_-0.6.8_-purple)](https://captum.ai/)
 [![license](https://img.shields.io/badge/R_-4.3.3_-red)](https://www.r-project.org/)
 
+> 🚧 **Repository Under Active Development** - Full release coming soon! We're currently finalizing the codebase and documentation.
+
 MethylAI is a convolutional neural network (CNN) based model that predicts DNA methylation levels at CpG sites from one-hot encoded DNA sequences. MethylAI was pre-trained on the most comprehensive multi-species WGBS dataset, including 1,574 human samples across 52 tissues and other 11 mammals. The model leverages a multi-scale CNN architecture and exponential activations for high accuracy and improved interpretability. Its key applications include decoding the cis-regulatory logic of DNA methylation via integration with [DeepSHAP](https://github.com/shap/shap) and predicting the impact of genetic variants on methylation landscapes.
 
 ## Key Features & Highlights
@@ -13,7 +15,7 @@ MethylAI is a convolutional neural network (CNN) based model that predicts DNA m
 
 **Largest Human WGBS Dataset:** Trained on the most extensive collection of human whole-genome bisulfite sequencing (WGBS) data to date, comprising 1,574 samples spanning 52 tissues and 238 cell types.
 
-**Cross-Species Pre-training:** Enhanced model accuracy through pre-training on WGBS data from human and **11 mammalian species**, including mouse (*Mus musculus*), rat (*Rattus norvegicus*), macaque (*Macaca fascicularis* and *Macaca mulatta*), chimpanzee (*Pan troglodytes*), gorilla (*Gorilla gorilla*), cow (*Bos taurus*), sheep (*Ovis aries*), dog (*Canis lupus familiaris*), pig (*Sus scrofa*), giant panda (*Ailuropoda melanoleuca*).
+**Cross-Species Pre-training:** Enhanced model accuracy through pre-training on WGBS data from **human** and **11 mammalian species**, including mouse (*Mus musculus*), rat (*Rattus norvegicus*), macaque (*Macaca fascicularis* and *Macaca mulatta*), chimpanzee (*Pan troglodytes*), gorilla (*Gorilla gorilla*), cow (*Bos taurus*), sheep (*Ovis aries*), dog (*Canis lupus familiaris*), pig (*Sus scrofa*), giant panda (*Ailuropoda melanoleuca*).
 
 ### Advanced Model Architecture
 
@@ -51,33 +53,35 @@ MethylAI can predict the impact of traits/disease-associated genetic variants on
 
 ---
 
-## Usage
+## Preparation
 
 This section provides a step-by-step guide to installing MethylAI and running its core functionalities.
 
-### Installation
+### Environment Setup
 
-We recommend using [Conda](https://www.anaconda.com/) to manage the environment.
+We recommend using [Conda](https://www.anaconda.com/) for environment management to ensure reproducibility.
 
-#### Step 1: Clone the Repository
+#### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/Yu-Lab-Genomics/MethylAI.git
 cd MethylAI
 ```
 
-#### Step 2: Create Conda Environment and Install Dependencies
+#### 2. Create Conda Environment and Install Dependencies
 
 ```bash
 # Create and activate the conda environment
-conda create -n methylai python=3.11 mamba
+conda create -n methylai python=3.10 mamba
 conda activate methylai
 
 # Install dependencies
 pip install -r requirements.txt
 ```
 
-#### Step 3: Download model checkpoints
+### Download Required Files
+
+#### 1. Download MethylAI Checkpoints
 
 You can download the pretrained model checkpoints below. Please download these files to the checkpoint folder to ensure our sample code runs smoothly.
 
@@ -89,23 +93,39 @@ You can download the pretrained model checkpoints below. Please download these f
 
 - [Fine-tuned model with human cell type dataset](https://methylai.aigenomicsyulab.com/): 207 human samples from a [nature paper](https://www.nature.com/articles/s41586-022-05580-6)
 
+#### 2. Download human reference genome (hg38)
+
+Obtain the reference genome for sequence extraction and coordinate mapping:
+
+```bash
+wget -P data/reference/ https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz
+gunzip data/reference/hg38.fa.gz
+```
+
+#### 3. Download CpG Site Coordinates for hg38
+
+#### 4. Download ENCODE WGBS Datasets for Fine-tuning Tutorial 1
+
+#### 5. Download JASPAR Transcription Factor Binding Site
+
 ---
 
 ### Quick Start: Model Inference Demo
 
 Run a quick demo to ensure your installation is correct. This will predict methylation levels for a set of example DNA sequences.
 
-#### Run the Inference Pipeline
+#### Run the Demo script
 
 ```bash
-python ./04.scPIT_inference/scPIT_inference.py --gpu 5 \
---model_ckpt ./02.checkpoint/model_weights.pth \
---output_path ./04.scPIT_inference/demo_output
+python ./demo/demo.py --gpu 0 \
+--model_ckpt ./checkpoint/methylAI_filetune_encode.pth \
+--output_path ./demo/demo_output
 ```
 
 Arguments:  
 --gpu: ID of the GPU to use. Default is GPU 5.  
 --model_ckpt: Path to the trained scPIT model checkpoint (already provided in ./02.checkpoint/).  
+--output_path: 
 
 #### Expected Output
 
@@ -118,7 +138,7 @@ This tutorial guides you through fine-tuning MethylAI on a public dataset.
 #### Step 1: Download and Preprocess Data
 
 ```bash
-# Download a sample ENCODE WGBS dataset (e.g., from ENCSR000***)
+# Download a sample ENCODE WGBS dataset
 bash scripts/download_encode_data.sh
 
 # Preprocess the data into the format required by MethylAI
