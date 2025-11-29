@@ -5,7 +5,7 @@
 [![license](https://img.shields.io/badge/Captum_-0.6.8_-purple)](https://captum.ai/)
 [![license](https://img.shields.io/badge/R_-4.3.3_-red)](https://www.r-project.org/)
 
-> 🚧 **Repository Under Active Development** - Full release coming soon! We're currently finalizing the codebase and documentation.
+> 🚧 **Repository Under Active Development** - Full release coming soon! We're currently finalizing the codebase and documentation.  
 
 MethylAI is a convolutional neural network (CNN) based model that predicts DNA methylation levels at CpG sites from one-hot encoded DNA sequences. MethylAI was pre-trained on the most comprehensive multi-species WGBS dataset, including 1,574 human samples across 52 tissues and other 11 mammals. The model leverages a multi-scale CNN architecture and exponential activations for high accuracy and improved interpretability. Its key applications include decoding the cis-regulatory logic of DNA methylation via integration with [DeepSHAP](https://github.com/shap/shap) and predicting the impact of genetic variants on methylation landscapes.
 
@@ -77,6 +77,9 @@ conda activate methylai
 
 # Install dependencies
 pip install -r requirements.txt
+
+# or install necessary dependencies
+mamba install pytorch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 pytorch-cuda=12.4 -c pytorch -c nvidia
 ```
 
 ### Download Required Files
@@ -85,24 +88,28 @@ pip install -r requirements.txt
 
 You can download the model checkpoints below. We recommend downloading the checkpoints to the `checkpoint` directory:
 
-- [Pre-trained model](https://methylai.aigenomicsyulab.com/): pre-trained with human dataset and other 11 mammalian species
-
-- [Fine-tuned model with complete human dataset](https://methylai.aigenomicsyulab.com/): 1574 human samples
-
-- [Fine-tuned model with ENCODE dataset](https://methylai.aigenomicsyulab.com/): 96 human samples from [ENCODE project](https://www.encodeproject.org/matrix/?type=Experiment&control_type!=*&status=released&perturbed=false&assay_title=WGBS&replicates.library.biosample.donor.organism.scientific_name=Homo+sapiens) (127 samples were available from ENCODE project, 96 samples passed our quality control)
-
-- [Fine-tuned model with human cell type dataset](https://methylai.aigenomicsyulab.com/): 207 human samples from a [nature paper](https://www.nature.com/articles/s41586-022-05580-6)
+- [Pre-trained model](https://backend.aigenomicsyulab.com/files/model-download/multi_species_pretrain): pre-trained with human dataset and other 11 mammalian species
+- [Fine-tuned model with complete human dataset](https://backend.aigenomicsyulab.com/files/model-download/human_complete): 1574 human samples
+- [Fine-tuned model with ENCODE dataset](https://backend.aigenomicsyulab.com/files/model-download/human_encode): 96 human samples from [ENCODE project](https://www.encodeproject.org/matrix/?type=Experiment&control_type!=*&status=released&perturbed=false&assay_title=WGBS&replicates.library.biosample.donor.organism.scientific_name=Homo+sapiens) (127 samples were available from ENCODE project, 96 samples passed our quality control)
+- [Fine-tuned model with human cell type dataset](https://backend.aigenomicsyulab.com/files/model-download/human_cell_type): 207 human samples from a [nature paper](https://www.nature.com/articles/s41586-022-05580-6)
+- [Fine-tuned model with HEK293T WGBS data](https://backend.aigenomicsyulab.com/files/model-download/hek293t) a WGBS of HEK293T cell line generated in this study
+- corresponding sample tables are available in our website: https://methylai.aigenomicsyulab.com/
 
 #### 2. Download human reference genome (hg38)
 
 Obtain the reference genome for sequence extraction and coordinate mapping:
 
 ```bash
-wget -P data/genome/ https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz
-gunzip data/reference/hg38.fa.gz
+wget -P data/genome -i data/genome/hg38_genome_link.txt
+gunzip data/genome/hg38.fa.gz
 ```
 
 #### 3. Download CpG Site Coordinates for hg38
+
+```bash
+wget
+gunzip 
+```
 
 ---
 
@@ -119,7 +126,7 @@ python demo/demo.py --gpu 0 \
 ```
 Arguments:  
 --gpu: ID of the GPU to use. Default is GPU 5.  
---model_ckpt: path to the fine-tuned model checkpoint  
+--model_ckpt: path to the model checkpoint  
 --output_path: 
 
 ### Expected Output
@@ -177,7 +184,7 @@ python scripts/generate_dataset_files.py \
   --output_folder data/encode_dataset
 ```
 
-### 2: Fine-tune the Model
+### 3. Fine-tune the Model
 
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,3 OMP_NUM_THREADS=4 nohup torchrun --standalone --nproc_per_node=gpu
@@ -219,7 +226,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 OMP_NUM_THREADS=4 nohup torchrun --standalone --npr
 Identify DNA methylation linked TF motifs.
 
 ```bash
-python scripts/run_deepshap.py \
+python script/run_deepshap.py \
   --model models/pretrained_model.h5 \
   --input_fasta data/regions_of_interest.fa \
   --output_dir results/deepshap/

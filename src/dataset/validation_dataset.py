@@ -2,10 +2,11 @@ import torch
 from torch.utils.data import Dataset
 import pandas as pd
 import numpy as np
-from ..utils.genome_fasta import GenomeFasta
-from ..utils.dna_sequence import dna_to_one_hot_tensor, get_reverse_complement
+from MethylAI.src.utils.genome_fasta import GenomeFasta
+from MethylAI.src.utils.dna_sequence import dna_to_one_hot_tensor, get_reverse_complement
+from MethylAI.src.utils.utils import check_output_folder, debug_methods
 
-
+@debug_methods
 class MethylAIValidationDataset(Dataset):
     def __init__(self, dataset_file: str, genome_fasta_file: str, model_input_dna_length: int,
                  minimal_coverage: int = 5, loss_weight_factor: float = 5.0, max_loss_weight_factor: float = 1.0,
