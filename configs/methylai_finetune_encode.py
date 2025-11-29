@@ -2,7 +2,7 @@ data_folder = ''
 checkpoint_folder = ''
 output_folder = ''
 
-methylai_parameter_dict = {
+methylai_config_dict = {
     # trainer
     'total_epoch_number': 3,
     'max_step_per_epoch': 10_000_000,

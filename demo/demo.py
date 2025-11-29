@@ -39,7 +39,7 @@ def demo(config_file: str, config_dict_name, model_state_file: str, gpu_id: int,
 
 def main_demo():
     demo(config_file='../configs/methylai_finetune_encode.py',
-         config_dict_name='',
+         config_dict_name='methylai_config_dict',
          model_state_file='../checkpoint/MethylAI_finetune_encode.pth',
          gpu_id=0,
          cpg_coordinate_file='demo_data/cpg_coordinate.txt',

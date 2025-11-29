@@ -23,21 +23,27 @@ def debug_methods(cls):
     return cls
 
 def load_config(config_file, dict_name):
-    """从Python模块导入配置字典"""
+    """通过文件路径导入配置字典"""
     try:
-        # 导入模块
-        module = importlib.import_module(config_file.replace('.py', ''))
+        # 获取模块名
+        module_name = os.path.splitext(os.path.basename(config_file))[0]
+        # 从文件路径加载模块
+        spec = importlib.util.spec_from_file_location(module_name, config_file)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
         # 获取字典
         config_dict = getattr(module, dict_name)
         return config_dict
-    except ImportError as e:
-        print(f"错误: 无法导入模块 {config_file}")
-        print(f"请确保文件 {config_file} 在Python路径中")
+    except FileNotFoundError:
+        print(f"错误: 找不到文件 {config_file}")
         sys.exit(1)
     except AttributeError as e:
-        print(f"错误: 模块中未找到字典 {dict_name}")
-        print(f"可用的字典: {[name for name in dir(module) if not name.startswith('_')]}")
+        print(f"错误: 文件中未找到字典 {dict_name}")
+        # 列出文件中所有不以_开头的属性
+        available_dicts = [name for name in dir(module) if not name.startswith('_') and isinstance(getattr(module, name), dict)]
+        print(f"可用的字典: {available_dicts}")
         sys.exit(1)
+
 
 
 
