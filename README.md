@@ -135,7 +135,7 @@ python demo/demo.py \
 --output_bedgraph
 ```
 **Arguments (required)**:  
-`--cpg_coordinate`: BED-formatted file (zero-base) containing CpG site coordinates. Contextual sequences will be extracted for model input.
+`--cpg_coordinate`: BED-formatted file (zero-base) containing CpG site coordinates. Contextual sequences will be extracted for model input.  
 `--genome_fasta`: Reference genome FASTA file for sequence extraction.  
 `--config_file`:  Python configuration file defining model architecture and hyperparameters.  
 `--config_dict_name`: Name of the Python dictionary variable containing configuration parameters.  
@@ -171,11 +171,13 @@ The following output files will be generated in the specified output directory:
 - **Note**: CpG coordinate order corresponds exactly to the input `cpg_coordinate.txt` file. For detailed interpretation of methylation level predictions, please refer to our publication (see Citation section).
 
 #### 2. Visualization Files (Optional)
+
 When `--output_bedgraph` is specified:
 
 **Directory**: `demo/demo_result/bedgraph/`  
 **Files**: Multiple bedGraph files named according to prediction columns (e.g., `prediction_0.bedgraph`, `prediction_1.bedgraph`)  
 **Purpose**: Genome browser-compatible tracks for visualizing methylation patterns across genomic regions
+
 ---
 
 ## Fine-tuning Tutorial 1: Using a ENCODE Dataset
