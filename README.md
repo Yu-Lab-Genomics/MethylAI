@@ -93,7 +93,7 @@ You can download the model checkpoints below. We recommend downloading the check
 - [Fine-tuned model with ENCODE dataset](https://backend.aigenomicsyulab.com/files/model-download/human_encode): 96 human samples from [ENCODE project](https://www.encodeproject.org/matrix/?type=Experiment&control_type!=*&status=released&perturbed=false&assay_title=WGBS&replicates.library.biosample.donor.organism.scientific_name=Homo+sapiens) (127 samples were available from ENCODE project, 96 samples passed our quality control)
 - [Fine-tuned model with human cell type dataset](https://backend.aigenomicsyulab.com/files/model-download/human_cell_type): 207 human samples from a [nature paper](https://www.nature.com/articles/s41586-022-05580-6)
 - [Fine-tuned model with HEK293T WGBS data](https://backend.aigenomicsyulab.com/files/model-download/hek293t) a WGBS of HEK293T cell line generated in this study
-- corresponding sample tables are available in our website: https://methylai.aigenomicsyulab.com/
+- Corresponding sample tables are available in our website: https://methylai.aigenomicsyulab.com/
 
 #### 2. Download human reference genome (hg38)
 
@@ -107,30 +107,75 @@ gunzip data/genome/hg38.fa.gz
 #### 3. Download CpG Site Coordinates for hg38
 
 ```bash
-wget
-gunzip 
+wget -P data/genome https://backend.aigenomicsyulab.com/files/model-download/cpg_coordinate_hg38_chr1_22
 ```
+Note: This `cpg_coordinate_hg38.chr1-22.sort.bed.gz` was generated using [wgbs_tools](https://github.com/nloyfer/wgbs_tools).
 
 ---
 
 ## Quick Start: Model Inference Demo
 
-Run a quick demo to ensure your preparation is correct. This will predict methylation levels for a set of example DNA sequences.
+Run a quick demo to ensure your preparation is correct. This will predict methylation levels for a set of CpG site within test set.
 
 ### Run the Demo script
 
 ```bash
-python demo/demo.py --gpu 0 \
---model_ckpt checkpoint/methylAI_filetune_encode.pth \
---output_path demo/demo_output
+python demo/demo.py \
+--cpg_coordinate demo/demo_data/cpg_coordinate.txt \
+--genome_fasta data/genome/hg38.fa \
+--config_file configs/methylai_finetune_human_cell_type.py \
+--config_dict_name methylai_config_dict \
+--model_ckpt checkpoint/MethylAI_finetune_human_cell_type.pth \
+--gpu_id 0 \
+--batch_size 200 \
+--num_workers 8 \
+--output_folder demo/demo_result/ \
+--output_prefix demo \
+--reverse_complement_augmentation \
+--output_bedgraph
 ```
-Arguments:  
---gpu: ID of the GPU to use. Default is GPU 5.  
---model_ckpt: path to the model checkpoint  
---output_path: 
+**Arguments (required)**:  
+`--cpg_coordinate`: BED-formatted file (zero-base) containing CpG site coordinates. Contextual sequences will be extracted for model input.
+`--genome_fasta`: Reference genome FASTA file for sequence extraction.  
+`--config_file`:  Python configuration file defining model architecture and hyperparameters.  
+`--config_dict_name`: Name of the Python dictionary variable containing configuration parameters.  
+`--model_ckpt`: Path to the model checkpoint file.  
+`--gpu_id`: GPU device for computation.  
+`--batch_size`: Batch size for DataLoader during inference.  
+`--num_workers`: Number of parallel workers for DataLoader.  
+`--output_folder`: Directory for saving prediction results.  
+
+**Arguments (optional)**:  
+`--output_prefix`: Custom prefix for output files.  
+`--reverse_complement_augmentation`: Enable reverse complement data augmentation.  
+`--output_bedgraph`: Generate methylation tracks in bedGraph format for genome browser visualization.  
+
+**⚠️ Technical Note**: The MethylAI model is designed to predict both site-specific and regional methylation patterns. Consequently, the program does not validate whether input coordinates correspond to canonical CpG dinucleotides. We caution that prediction accuracy for non-CpG sites has not been systematically evaluated and may not reflect biological reality.
 
 ### Expected Output
 
+The following output files will be generated in the specified output directory:
+
+**1. Primary Output File: `demo/demo_result/demo_prediction_dataframe.txt`**
+- **Format**: Tab-separated file with header row
+- **Structure**:
+  - Columns 1-3: BED-format coordinates (chr, start, end)
+  - Subsequent columns: Methylation predictions formatted as `prediction_{index}`
+- **Prediction Types**:
+  - **Smoothed site methylation level** (indices 0-206)
+  - **Raw site methylation level** (indices 207-413)
+  - **Regional methylation estimates**:
+    - 1kb window (indices 414-620)
+    - 500bp window (indices 621-827)
+    - 200bp window (indices 828-1034)
+- **Note**: CpG coordinate order corresponds exactly to the input `cpg_coordinate.txt` file. For detailed interpretation of methylation level predictions, please refer to our publication (see Citation section).
+
+#### 2. Visualization Files (Optional)
+When `--output_bedgraph` is specified:
+
+**Directory**: `demo/demo_result/bedgraph/`  
+**Files**: Multiple bedGraph files named according to prediction columns (e.g., `prediction_0.bedgraph`, `prediction_1.bedgraph`)  
+**Purpose**: Genome browser-compatible tracks for visualizing methylation patterns across genomic regions
 ---
 
 ## Fine-tuning Tutorial 1: Using a ENCODE Dataset
@@ -149,7 +194,7 @@ Preprocessing to extract coverage and mc values from WGBS data.
 python scripts/preprocess_encode_data.py \
   --input_folder data/encode \
   --output_folder data/encode_preprocessed \
-  --cpg_coordinate data/genome/cpg_coordinate_hg38.bed
+  --cpg_coordinate data/genome/cpg_coordinate_hg38.chr1-22.sort.bed.gz
 ```
 **Arguments:**
 - `--input_folder`: Input directory with ENCODE WGBS datasets
@@ -253,5 +298,6 @@ The output will show the predicted change in methylation level for each variant,
 
 ## Citation
 
-If you use MethylAI in your research, please cite our [preprint](https://www.biorxiv.org/content/10.1101/2025.11.20.689274v1)/publication.
+If you use MethylAI in your research, please cite our preprint/publication:  
+- https://www.biorxiv.org/content/10.1101/2025.11.20.689274v1
 

@@ -3,9 +3,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import pandas as pd
 import numpy as np
-import os
 import gc
-import subprocess
 import datetime
 from MethylAI.src.dataset.validation_dataset import MethylAIValidationDataset
 from MethylAI.src.utils.utils import check_output_folder, debug_methods
@@ -14,7 +12,7 @@ from MethylAI.src.utils.utils import check_output_folder, debug_methods
 class InferenceTools:
     def __init__(self, model: nn.Module, model_state_file: str, gpu_number: int,
                  is_reverse_complement_augmentation: bool, print_per_step: int,
-                 output_folder: str, output_prefix: str):
+                 output_folder: str, output_prefix: str = None):
         # model & load state
         self.model = model
         self.device = torch.device(gpu_number)
@@ -26,8 +24,12 @@ class InferenceTools:
         self.print_per_step = print_per_step
         # 保存参数
         self.output_folder = output_folder
+        check_output_folder(self.output_folder)
         self.output_bedgraph_folder = f'{self.output_folder}/bedgraph'
-        self.output_prefix = f'{output_folder}/{output_prefix}'
+        if output_prefix:
+            self.output_prefix = f'{output_folder}/{output_prefix}_'
+        else:
+            self.output_prefix = f'{output_folder}/'
         #################################################################
         # 这部分用于计算cpg embedding等
         # dataset_dataframe
@@ -146,43 +148,31 @@ class InferenceTools:
         cpg_embedding_dataframe.columns = cpg_embedding_col_name_list
         # 为cpg_embedding_col_name_list拼接self.dataset_dataframe的前4列（基因组坐标信息）
         self.cpg_embedding_dataframe = pd.concat(
-            [self.true_dataframe.iloc[:, 0:4], cpg_embedding_dataframe], axis=1
+            [self.dataset_dataframe.iloc[:, 0:3], cpg_embedding_dataframe], axis=1
         )
 
     def output_cpg_embedding_dataframe(self):
         # 输出文件
-        file_name = f'{self.output_prefix}_cpg_embedding_dataframe.txt'
+        file_name = f'{self.output_prefix}cpg_embedding_dataframe.txt'
         print('output:', file_name)
         self.cpg_embedding_dataframe.to_csv(file_name, sep='\t', index=False)
 
     def output_prediction_dataframe(self):
-        check_output_folder(self.output_folder)
         # 输出文件
-        file_name = f'{self.output_prefix}_prediction_dataframe.txt'
+        file_name = f'{self.output_prefix}prediction_dataframe.txt'
         print('output:', file_name)
         self.prediction_dataframe.to_csv(file_name, sep='\t', index=False)
 
     def output_prediction_bedgraph_format(self):
+        # check bedgraph folder
+        check_output_folder(self.output_bedgraph_folder)
         # prediction_dataframe: 排序并删除完全重复的行
         self.prediction_dataframe.sort_values(by=['chr', 'start'], inplace=True)
         self.prediction_dataframe.drop_duplicates(inplace=True)
         # 输出bedgraph格式，前4列是坐标，因此从4开始遍历
-        for col_index in range(4, len(self.prediction_dataframe.columns)):
+        for col_index in range(3, len(self.prediction_dataframe.columns)):
             output_bed_dataframe = self.prediction_dataframe.iloc[:, [0, 1, 2, col_index]]
             file_name = f'{self.output_bedgraph_folder}/{self.prediction_dataframe.columns[col_index]}.bedgraph'
             print('output:', file_name)
             output_bed_dataframe.to_csv(file_name, sep='\t', index=False, header=False)
-
-    def convert_bedgraph_to_bigwig(self):
-        # 获取当前路径
-        current_path = os.getcwd()
-        bedgraph_folder = f'{current_path}/{self.output_bedgraph_folder}'
-        bigwig_folder = bedgraph_folder.replace('/bedgraph', '/bigwig')
-        if not os.path.exists(bigwig_folder):
-            print(f'mkdir {bigwig_folder}')
-            os.mkdir(bigwig_folder)
-        # bedgraph to bigwig
-        bedgraph_to_bigwig_command = f'sh {self.bedgraph_to_bigwig_script} {bedgraph_folder} {bigwig_folder} {self.chrom_size_file}'
-        print(bedgraph_to_bigwig_command)
-        subprocess.run(bedgraph_to_bigwig_command, shell=True)
 

@@ -1,4 +1,4 @@
-human_atlas_parameter_dict = {
+methylai_config_dict = {
     # trainer设置
     'total_epoch_number': 3,
     'max_step_per_epoch': 100_0000,
