@@ -80,6 +80,8 @@ pip install -r requirements.txt
 
 # or install necessary dependencies
 mamba install pytorch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 pytorch-cuda=12.4 -c pytorch -c nvidia
+mamba install pandas==2.2.3 numpy==2.1.3 scipy polars==1.14.0 pyarrow==18.1.0
+mamba install r-base==4.3.3 r-data.table r-r.utils r-glue bioconductor-bsseq bioconductor-biocparallel
 ```
 
 ### Download Required Files
@@ -134,7 +136,8 @@ python demo/demo.py \
 --reverse_complement_augmentation \
 --output_bedgraph
 ```
-**Arguments (required)**:  
+
+**Arguments (required)**  
 `--cpg_coordinate`: BED-formatted file (zero-base) containing CpG site coordinates. Contextual sequences will be extracted for model input.  
 `--genome_fasta`: Reference genome FASTA file for sequence extraction.  
 `--config_file`:  Python configuration file defining model architecture and hyperparameters.  
@@ -145,12 +148,13 @@ python demo/demo.py \
 `--num_workers`: Number of parallel workers for DataLoader.  
 `--output_folder`: Directory for saving prediction results.  
 
-**Arguments (optional)**:  
+**Arguments (optional)**  
 `--output_prefix`: Custom prefix for output files.  
 `--reverse_complement_augmentation`: Enable reverse complement data augmentation.  
 `--output_bedgraph`: Generate methylation tracks in bedGraph format for genome browser visualization.  
 
-**⚠️ Technical Note**: The MethylAI model is designed to predict both site-specific and regional methylation patterns. Consequently, the program does not validate whether input coordinates correspond to canonical CpG dinucleotides. We caution that prediction accuracy for non-CpG sites has not been systematically evaluated and may not reflect biological reality.
+**⚠️ Technical Note**: The MethylAI model is designed to predict both site-specific and regional methylation levels. Consequently, the program does not validate whether input coordinates correspond to canonical CpG dinucleotides. We caution that prediction accuracy for non-CpG sites has not been systematically evaluated and may not reflect biological reality.
+
 
 ### Expected Output
 
@@ -164,7 +168,7 @@ The following output files will be generated in the specified output directory:
 - **Prediction Types**:
   - **Smoothed site methylation level** (indices 0-206)
   - **Raw site methylation level** (indices 207-413)
-  - **Regional methylation estimates**:
+  - **Regional methylation levels**:
     - 1kb window (indices 414-620)
     - 500bp window (indices 621-827)
     - 200bp window (indices 828-1034)
@@ -195,47 +199,162 @@ Preprocessing to extract coverage and mc values from WGBS data.
 ```bash
 python scripts/preprocess_encode_data.py \
   --input_folder data/encode \
+  --input_file_suffix .bed.gz \
   --output_folder data/encode_preprocessed \
-  --cpg_coordinate data/genome/cpg_coordinate_hg38.chr1-22.sort.bed.gz
+  --output_log_file preprocess.log \
+  --reference_cpg_coordinate_file data/genome/cpg_coordinate_hg38.chr1-22.sort.bed.gz
 ```
-**Arguments:**
+**Arguments (required)**
 - `--input_folder`: Input directory with ENCODE WGBS datasets
+- `--input_file_suffix`:  
 - `--output_folder`: Output directory for processed data
-- `--cpg_coordinate`: hg38 CpG coordinate BED file for methylation data integration
+- `--output_log_file`:  
+
+**Arguments (optional)**
+- `--reference_cpg_coordinate_file`: reference CpG coordinate BED file for methylation data integration
 
 #### 2.2. Obtain Raw and Smoothed Methylation Values
-The R script applies the bsmooth algorithm from the bsseq R package to generate both raw and smoothed methylation values for downstream analysis.
+The R script applies the BSmooth algorithm from the [bsseq](https://bioconductor.org/packages/release//bioc/html/bsseq.html) R package to generate both raw and smoothed methylation values for downstream analysis.
 ```bash
-Rscript src/script/bsmooth_human_wgbs.R \
+Rscript src/script/bsmooth.R \
   data/encode_preprocessed \
   .preprocessed.txt \
   64 \
-  sample_index.txt \
-  smoothed_methylation.txt.gz \
+  smooth_methylation_info.txt \
+  smooth_methylation_data.txt.gz \
   35 \
   500
 ```
-Arguments (positional):  
+**Arguments (positional)**  
 `1`: Directory containing preprocessed ENCODE files (output from previous step)  
 `2`: Suffix pattern to identify preprocessed files (default: .preprocessed.txt)  
 `3`: Number of CPU cores to utilize for parallel processing (adjust based on available hardware)  
 `4`: Mapping file linking filenames to sample indices in the output  
 `5`: Output file containing both raw and smoothed methylation values (compressed)  
-`6`: Minimum coverage threshold for methylation calling (bsmooth parameter)  
-`7`: Smoothing window size for the loess regression (bsmooth parameter)
+`6`: The minimum number of methylation loci in a smoothing window. (BSmooth parameter)  
+`7`: The minimum smoothing window, in bases. (BSmooth parameter)
 
 #### 2.3. Generate train/validation/test dataset files
 ```bash
-python scripts/generate_dataset_files.py \
-  --smoothed_methylation_file data/encode_preprocessed/smoothed_methylation.txt.gz \
-  --output_folder data/encode_dataset
+python src/preprocess/generate_dataset.py \
+--smooth_methylation_file data/encode_preprocess/smoothed_methylation_data.txt.gz \
+--data_info_filedata/encode_preprocess/smoothed_methylation_info.txt \
+--genome_fasta_file data/genome/hg38.fa \
+--chrom_size_file data/genome/hg38.chrom.sizes \
+--output_folder data/encode_dataset \
+--output_prefix encode
 ```
+**Expected output:**  
+Upon successful execution, the following files will be generated in the specified output folder (`data/encode_dataset` in this example):
+
+1. Complete Dataset File  
+- **File:** `encode_complete_dataset.txt`  
+- **Format:** Tab-separated values with header row  
+- **Contents:**
+  - Columns 1-3: BED-format CpG site coordinates (`chr`, `start`, `end`), sorted by chromosome and start position.
+  - Subsequent columns represent methylation levels, organized in three sections:
+    - **Smoothed site methylation levels**: Columns labeled as `smooth_{dataset_index}`
+    - **Raw site methylation levels**: Columns labeled as `raw_{dataset_index}`
+    - **Sequencing coverage**: Columns labeled as `coverage_{dataset_index}`
+    - **Regional methylation levels**: Columns labeled as `window_{window_size}_{dataset_index}` (window sizes: 1000, 500, 200)  
+- **Purpose:** This comprehensive file contains data for all CpG sites and is intended for downstream analyses.
+
+2. Model Training Datasets  
+- **Files:**
+  - `encode_train_set.pkl`
+  - `encode_validation_set.pkl`
+  - `encode_test_set.pkl`
+
+**Format:** Python pickle objects.  
+**Contents:** These files contain the training, validation, and test splits, respectively, partitioned by chromosome as specified by the `--training_chr`, `--validation_chr`, and `--test_chr` arguments.  
+**Purpose:** Direct input for model training and evaluation pipelines.
+
+3.Dataset Information  
+**File:** `encode_data_info.txt`  
+**Format:** Tab-separated values with metadata.
+**Contents:**  
+- Sample quality control (QC) statistics.  
+- Mapping between `dataset_index`, `model_output_index`, and original filenames.  
+**Purpose:** Provides traceability between processed data and original samples, along with QC metrics for downstream interpretation.
+
+**Arguments (required)**  
+`--smooth_methylation_file`: File containing raw and smoothed methylation values (output from bsmooth.R).  
+`--data_info_file`: Sample information file (output from bsmooth.R).  
+`--genome_fasta_file`: Reference genome FASTA file (must match the coordinate system used in methylation files).  
+`--chrom_size_file`: Chromosome sizes file for the reference genome.  
+`--output_folder`: Directory for storing generated dataset files.  
+`--output_prefix`: Prefix for output filenames.  
+
+**Arguments (optional)**  
+`--model_input_dna_length`: Length of DNA sequence used as model input (default: 18432). **Do not modify for tutorial or reproducibility**.  
+`--threshold_min_coverage`: Minimum coverage threshold for defining high-quality CpG sites (default: `5`). **Do not modify for tutorial or reproducibility**.  
+`--threshold_max_missing_cpg_ratio`: Sample QC threshold; samples with low-quality CpG ratio exceeding this value are excluded (default: `0.5`). **Do not modify for tutorial or reproducibility**.  
+`--threshold_max_n_base_ratio`: CpG site QC threshold; sites with N-base ratio above this value in the extracted sequence are excluded (default: `0.02`). **Do not modify for tutorial or reproducibility**.  
+`--threshold_max_missing_sample_ratio`: CpG site QC threshold; sites with low-quality calls across samples exceeding this ratio are excluded (default: `0.5`). **Do not modify for tutorial or reproducibility**.  
+`--calculate_regional_methylation`: Window sizes (in bp) for regional methylation calculation (default: `1000 500 200`). **Note: Computing regional methylation for all ~27 million CpG sites requires approximately 24 hours. Do not modify for tutorial or reproducibility**.  
+`--quiet`: Suppress runtime messages when set.  
+`--output_format`: Dataset output format; options: pickle or feather (default: `pickle`). **Do not modify for tutorial or reproducibility**.  
+`--output_sampled_training_set`: Generate randomly sampled training subsets (proportions: 0.1, 0.2, 0.5) for rapid experimentation. **Do not set for full reproducibility**.  
+`--output_slice_training_set`: Output each CpG site as a separate file to handle memory constraints. **Note: This mode requires >6 hours to complete**.  
+`--training_chr`: Chromosomes for training set (default: `chr1, chr2, chr3, chr4, chr5, chr6, chr7, chr8, chr9, chr12, chr13, chr14, chr15, chr16, chr17, chr18, chr19, chr20, chr21, chr22`). **Do not modify for tutorial or reproducibility**.  
+`--validation_chr`: Chromosomes for validation set (default: `chr10`). **Do not modify for tutorial or reproducibility**.  
+`--test_chr`: Chromosomes for test set (default: `chr11`). **Do not modify for tutorial or reproducibility**.
 
 ### 3. Fine-tune the Model
 
+To fine-tune MethylAI on your processed dataset, you need to modify the configuration file. Follow these steps:
+
+1. **Open the configuration file**  
+   Locate and open `config/finetune_tutorial_encode.py` in a text editor.
+
+2. **Modify the configuration dictionary**  
+   Update the following keys in the `methylai_config_dict` dictionary:
+
+   | Key | Description                                                                                                                                                     | Example Value                                                     |
+   |-----|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|
+   | `'output_folder'` | **Absolute path** to the directory where all fine‑tuning outputs (checkpoints, logs, etc.) will be saved.                                                       | `/absolute/path/to/your/output_folder`                            |
+   | `'output_result_file'` | Filename (within `output_folder`) that will store per‑epoch training and validation loss, validation Pearson correlation (PCC), and Spearman correlation (SCC). | `fine_tune_results.txt`                                           |
+   | `'pretrain_snapshot_path'` | **Absolute path** to the pre‑trained checkpoint downloaded in the Preparation step (`MethylAI_pretrain_12_species.pth`).                                        | `/absolute/path/to/checkpoint/MethylAI_pretrain_12_species.pth`   |
+   | `'train_set_file'` | **Absolute path** to the training set file generated in the previous step (`encode_train_set.pkl`).                                                             | `/absolute/path/to/data/encode_dataset/encode_train_set.pkl`      |
+   | `'validation_set_file'` | **Absolute path** to the validation set file (`encode_validation_set.pkl`).                                                                                     | `/absolute/path/to/data/encode_dataset/encode_validation_set.pkl` |
+   | `'genome_fasta_file'` | **Absolute path** to the reference genome FASTA file (`hg38.fa`).                                                                                               | `/absolute/path/to/data/genome/hg38.fa`                           |
+   | `'batch_size'` | Batch size for training. Default is 50 (optimized for RTX 4090 24 GB GPU). Adjust according to your GPU memory capacity.                                        | `50`                                                              |
+
+3. **Save the configuration file**  
+   After making the changes, save the file.
+
+**Important Notes:**
+- We strongly recommend using **absolute paths** to avoid path‑related errors.
+- The `'batch_size'` should be tuned based on your GPU’s available memory. Reduce it if you encounter out‑of‑memory errors.
+- Ensure that all input files (checkpoint, dataset, reference genome) are accessible at the specified paths.
+
+After configuring the parameters in `config/finetune_tutorial_encode.py`, execute the following command to fine‑tune the MethylAI model:
+
 ```bash
-CUDA_VISIBLE_DEVICES=0,1,2,3 OMP_NUM_THREADS=4 nohup torchrun --standalone --nproc_per_node=gpu
+CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 OMP_NUM_THREADS=4 \
+nohup torchrun --standalone --nproc_per_node=gpu \
+src/script/finetune.py \
+--config_file configs/methylai_finetune_tutorial_encode.py \
+--config_dict_name methylai_config_dict \
+--print_loss_step 500\
+--print_model_output_step 5000\
+>> result/finetune_tutorial_encode.log 2>&1 &
 ```
+**Environment Setting:**  
+`CUDA_VISIBLE_DEVICES`: Specifies the GPU devices available for the job (default: 0‑3). Adjust this variable to match your hardware configuration.  
+`OMP_NUM_THREADS`: Sets the number of OpenMP threads for CPU‑parallel operations (default: 4). Modify based on your CPU core count.
+
+**Arguments (required)**  
+`--config_file`: Path to the Python configuration file defining the model and training setup.  
+`--config_dict_name`:  Name of the Python dictionary variable (within the config file) that holds the configuration.
+
+**Arguments (optional)**  
+`--print_loss_step`: Interval (in training steps) for printing loss values to monitor training stability and detect NaN issues (default: 500).  
+`--print_model_output_step`: Interval (in training steps) for logging model outputs to verify numerical stability (default: 5000).
+
+**Logging**  
+`result/finetune_tutorial_encode.log`: All runtime messages (stdout and stderr) are redirected to this log file. You can change the path and filename as needed.  
+The `nohup` command allows the process to continue running after disconnecting from the terminal.
 
 ## Fine-tuning Tutorial 2: Using Your Own WGBS Dataset
 

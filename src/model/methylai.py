@@ -137,7 +137,7 @@ class OutputBlock(nn.Module):
         return y
 
 
-class MethlyAI(nn.Module):
+class MethylAI(nn.Module):
     def __init__(self, methylai_parameter_dict: dict = None):
         super().__init__()
         # default parameter
@@ -219,13 +219,4 @@ class MethlyAI(nn.Module):
             return cpg_embedding, dna_methylation_level
         else:
             return dna_methylation_level
-
-
-
-
-
-
-
-
-
 

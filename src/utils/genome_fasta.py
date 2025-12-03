@@ -22,37 +22,26 @@ class GenomeFasta:
 
     def get_sequence_tuple(self, chr: str, start: int, end: int, upper_sequence: bool = True):
         # header of fasta file format
-        fa_header = '_'.join([chr, str(start), str(end)])
+        fasta_name = '_'.join([chr, str(start), str(end)])
         # check start position
         if start < 0:
-            fa_header = fa_header + "(start_position_smaller_than_0)"
+            fasta_name = fasta_name + "(start_position_smaller_than_0)"
         # check end position
-        chr_fa = self.chr_to_dna_dict[chr]
-        chr_fa_length = len(chr_fa)
-        if end > chr_fa_length:
-            fa_header = fa_header + "(end_position_bigger_than_" + str(chr_fa_length) + ")"
+        chr_fasta = self.chr_to_dna_dict[chr]
+        chr_fasta_length = len(chr_fasta)
+        if end > chr_fasta_length:
+            fasta_name = fasta_name + "(end_position_bigger_than_" + str(chr_fasta_length) + ")"
         # get sequence
-        sequence = chr_fa[start:end]
+        sequence = chr_fasta[start:end]
         if upper_sequence:
             sequence = sequence.upper()
-        fa_sequence_tuple = (fa_header, sequence)
-        return fa_sequence_tuple
+        fasta_sequence_tuple = (fasta_name, sequence)
+        return fasta_sequence_tuple
 
-    def get_fa_sequence(self, chr_number: str, start: int, end: int, upper_sequence: bool = True):
-        fa_sequence_tuple = self.get_sequence_tuple(chr_number, start, end, upper_sequence)
-        # head of fastq file
-        fa_header = fa_sequence_tuple[0]
+    def get_n_number(self, chr_number, start, end):
+        fasta_sequence_tuple = self.get_sequence_tuple(chr_number, start, end, upper_sequence=True)
         # sequence
-        sequence = fa_sequence_tuple[1]
-        fa_sequence = ">" + fa_header + "\n" + sequence + "\n"
-        return fa_sequence
-
-    def get_tab_delimited_sequence(self, chr_number: str, start: int, end: int, upper_sequence: bool = True):
-        fa_sequence_tuple = self.get_sequence_tuple(chr_number, start, end, upper_sequence)
-        # head of fastq file
-        fa_header = fa_sequence_tuple[0]
-        # sequence
-        sequence = fa_sequence_tuple[1]
-        fa_sequence = fa_header + "\t" + sequence + "\n"
-        return fa_sequence
+        sequence = fasta_sequence_tuple[1]
+        n_number = sequence.count('N')
+        return n_number
 

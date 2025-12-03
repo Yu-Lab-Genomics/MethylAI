@@ -1,3 +1,5 @@
+
+
 methylai_config_dict = {
     # trainer设置
     'total_epoch_number': 3,
@@ -6,8 +8,6 @@ methylai_config_dict = {
     'output_block_learning_rate': 0.0005,
     'weight_decay': 0.01,
     'batch_size': 50,
-    'warmup_lr_epoch_number': 1,
-    'constant_lr_epoch_number': 1,
     'pretrain_snapshot_path': None,
     'is_load_output_block_pretrain_weight': True,
     'snapshot_path': None,
@@ -30,8 +30,11 @@ methylai_config_dict = {
     'loss_weight_factor': 5,
     'max_loss_weight_factor': 1.0,
     'minimal_coverage': 5,
-    'keep_raw_methylation': True,
-    'reverse_complement_augmentation': True,
+    'is_keep_raw_methylation': True,
+    'is_reverse_complement_augmentation': True,
+    # learning rate scheduler
+    'warmup_lr_epoch_number': 1,
+    'constant_lr_epoch_number': 1,
     # dataset file path
     'train_set_file': '/home/chenfaming/pool1/project/231009_DNA_methylation_data/241211_human_data/11_human1682_dataset/'
                       'human1681_smooth_raw_window3_train_chromosome',

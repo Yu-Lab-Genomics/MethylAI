@@ -6,8 +6,6 @@ methylai_config_dict = {
     'output_block_learning_rate': 0.0006,
     'weight_decay': 0.01,
     'batch_size': 150,
-    'warmup_lr_epoch_number': 1,
-    'constant_lr_epoch_number': 1,
     'output_folder': '11_finetune_human_atlas',
     'pretrain_snapshot_path': '1_train/snapshot/snapshot_epoch_1.pth',
     'is_load_output_block_pretrain_weight': False,
@@ -32,6 +30,9 @@ methylai_config_dict = {
     'minimal_coverage': 5,
     'keep_raw_methylation': True,
     'reverse_complement_augmentation': True,
+    # learning rate scheduler
+    'warmup_lr_epoch_number': 1,
+    'constant_lr_epoch_number': 1,
     # 训练集文件设置
     'train_set_file': '/home/chenfaming/pool1/project/231009_DNA_methylation_data/241211_human_data/18_human_atlas_dataset/2_dataset_file/'
                       'human_atlas_smooth_raw_window3_train_chromosome.pkl',

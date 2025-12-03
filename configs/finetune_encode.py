@@ -32,8 +32,8 @@ methylai_config_dict = {
     'loss_weight_factor': 5,
     'max_loss_weight_factor': 1.0,
     'minimal_coverage': 5,
-    'keep_raw_methylation': True,
-    'reverse_complement_augmentation': True,
+    'is_keep_raw_methylation': True,
+    'is_reverse_complement_augmentation': True,
     # learning rate scheduler
     'warmup_lr_epoch_number': 1,
     'constant_lr_epoch_number': 1,

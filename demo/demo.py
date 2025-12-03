@@ -72,7 +72,8 @@ def main_argparse():
     # optional parameter
     parser.add_argument('--output_prefix', help='Custom prefix for output files.')
     parser.add_argument('--reverse_complement_augmentation', action='store_true', help='Enable reverse complement data augmentation.')
-    parser.add_argument('--output_bedgraph', action='store_true', help='Generate methylation tracks in bedGraph format for genome browser visualization.')
+    parser.add_argument('--output_bedgraph', action='store_true',
+                        help='Generate methylation tracks in bedGraph format for genome browser visualization.')
     # 解析参数
     args = parser.parse_args()
     demo(cpg_coordinate_file=args.cpg_coordinate,
