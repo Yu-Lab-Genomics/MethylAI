@@ -7,7 +7,7 @@
 
 > 🚧 **Repository Under Active Development** - Full release coming soon! We're currently finalizing the codebase and documentation.  
 
-MethylAI is a convolutional neural network (CNN) based model that predicts DNA methylation levels at CpG sites from one-hot encoded DNA sequences. MethylAI was pre-trained on the most comprehensive multi-species WGBS dataset, including 1,574 human samples across 52 tissues and other 11 mammals. The model leverages a multi-scale CNN architecture and exponential activations for high accuracy and improved interpretability. Its key applications include decoding the cis-regulatory logic of DNA methylation via integration with [DeepSHAP](https://github.com/shap/shap) and predicting the impact of genetic variants on methylation landscapes.
+MethylAI is a convolutional neural network (CNN) based model that predicts DNA methylation levels at CpG sites from one-hot encoded DNA sequences. MethylAI was pre-trained on the most comprehensive multi-species WGBS dataset, including 1,574 human samples across 52 tissues and other 11 mammals. The model leverages a multi-scale CNN architecture and exponential activations for high accuracy and improved interpretability. Its key applications include decoding the cis-regulatory logic of DNA methylation via integration with DeepSHAP and predicting the impact of genetic variants on methylation landscapes.
 
 ## Key Features & Highlights
 
@@ -291,10 +291,10 @@ Upon successful execution, the following files will be generated in the specifie
 `--threshold_max_missing_cpg_ratio`: Sample QC threshold; samples with low-quality CpG ratio exceeding this value are excluded (default: `0.5`). **Do not modify for tutorial or reproducibility**.  
 `--threshold_max_n_base_ratio`: CpG site QC threshold; sites with N-base ratio above this value in the extracted sequence are excluded (default: `0.02`). **Do not modify for tutorial or reproducibility**.  
 `--threshold_max_missing_sample_ratio`: CpG site QC threshold; sites with low-quality calls across samples exceeding this ratio are excluded (default: `0.5`). **Do not modify for tutorial or reproducibility**.  
-`--calculate_regional_methylation`: Window sizes (in bp) for regional methylation calculation (default: `1000 500 200`). **Note: Computing regional methylation for all ~27 million CpG sites requires approximately 24 hours. Do not modify for tutorial or reproducibility**.  
+`--calculate_regional_methylation`: Window sizes (in bp) for regional methylation calculation (default: `1000 500 200`). Set `--calculate_regional_methylation 0` to disable this calculation. **Note: Computing regional methylation for all ~27 million CpG sites requires approximately 24 hours. Do not modify for tutorial or reproducibility**.  
 `--quiet`: Suppress runtime messages when set.  
 `--output_format`: Dataset output format; options: pickle or feather (default: `pickle`). **Do not modify for tutorial or reproducibility**.  
-`--output_sampled_training_set`: Generate randomly sampled training subsets (proportions: 0.1, 0.2, 0.5) for rapid experimentation. **Do not set for full reproducibility**.  
+`--output_sampled_training_set`: Generates randomly sampled training subsets for rapid experimentation. Accepts one or more floating-point values between 0 and 1 (e.g., `0.1 0.2 0.5`) representing the sampling proportions relative to the full training set. This feature is disabled by default. **Do not set for full reproducibility**.  
 `--output_slice_training_set`: Output each CpG site as a separate file to handle memory constraints. **Note: This mode requires >6 hours to complete**.  
 `--training_chr`: Chromosomes for training set (default: `chr1, chr2, chr3, chr4, chr5, chr6, chr7, chr8, chr9, chr12, chr13, chr14, chr15, chr16, chr17, chr18, chr19, chr20, chr21, chr22`). **Do not modify for tutorial or reproducibility**.  
 `--validation_chr`: Chromosomes for validation set (default: `chr10`). **Do not modify for tutorial or reproducibility**.  
@@ -310,15 +310,15 @@ To fine-tune MethylAI on your processed dataset, you need to modify the configur
 2. **Modify the configuration dictionary**  
    Update the following keys in the `methylai_config_dict` dictionary:
 
-   | Key | Description                                                                                                                                                     | Example Value                                                     |
-   |-----|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|
-   | `'output_folder'` | **Absolute path** to the directory where all fine‑tuning outputs (checkpoints, logs, etc.) will be saved.                                                       | `/absolute/path/to/your/output_folder`                            |
+   | Key | Description                                                                                                                                                   | Example Value                                                     |
+   |-----|---------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|
+   | `'output_folder'` | **Absolute path** to the directory where all fine‑tuning outputs (checkpoints, logs, etc.) will be saved.                                                     | `/absolute/path/to/your/output_folder`                            |
    | `'output_result_file'` | Filename (within `output_folder`) that will store per‑epoch training and validation loss, validation Pearson correlation (PCC), and Spearman correlation (SCC). | `fine_tune_results.txt`                                           |
-   | `'pretrain_snapshot_path'` | **Absolute path** to the pre‑trained checkpoint downloaded in the Preparation step (`MethylAI_pretrain_12_species.pth`).                                        | `/absolute/path/to/checkpoint/MethylAI_pretrain_12_species.pth`   |
-   | `'train_set_file'` | **Absolute path** to the training set file generated in the previous step (`encode_train_set.pkl`).                                                             | `/absolute/path/to/data/encode_dataset/encode_train_set.pkl`      |
-   | `'validation_set_file'` | **Absolute path** to the validation set file (`encode_validation_set.pkl`).                                                                                     | `/absolute/path/to/data/encode_dataset/encode_validation_set.pkl` |
-   | `'genome_fasta_file'` | **Absolute path** to the reference genome FASTA file (`hg38.fa`).                                                                                               | `/absolute/path/to/data/genome/hg38.fa`                           |
-   | `'batch_size'` | Batch size for training. Default is 50 (optimized for RTX 4090 24 GB GPU). Adjust according to your GPU memory capacity.                                        | `50`                                                              |
+   | `'pretrain_snapshot_path'` | **Absolute path** to the pre‑trained checkpoint downloaded in the Preparation step (`MethylAI_pretrain_12_species.pth`).                                      | `/absolute/path/to/checkpoint/MethylAI_pretrain_12_species.pth`   |
+   | `'train_set_file'` | **Absolute path** to the training set file generated in the previous step (`encode_train_set.pkl`).                                                           | `/absolute/path/to/data/encode_dataset/encode_train_set.pkl`      |
+   | `'validation_set_file'` | **Absolute path** to the validation set file (`encode_validation_set.pkl`).                                                                                   | `/absolute/path/to/data/encode_dataset/encode_validation_set.pkl` |
+   | `'genome_fasta_file'` | **Absolute path** to the reference genome FASTA file (`hg38.fa`).                                                                                             | `/absolute/path/to/data/genome/hg38.fa`                           |
+   | `'batch_size'` | Batch size for training. Default is 50 (for RTX4090 24GB GPU). Adjust according to your GPU memory capacity.                                        | `50`                                                              |
 
 3. **Save the configuration file**  
    After making the changes, save the file.
@@ -331,13 +331,13 @@ To fine-tune MethylAI on your processed dataset, you need to modify the configur
 After configuring the parameters in `config/finetune_tutorial_encode.py`, execute the following command to fine‑tune the MethylAI model:
 
 ```bash
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 OMP_NUM_THREADS=4 \
+CUDA_VISIBLE_DEVICES=0,1,2,3 OMP_NUM_THREADS=4 \
 nohup torchrun --standalone --nproc_per_node=gpu \
 src/script/finetune.py \
---config_file configs/methylai_finetune_tutorial_encode.py \
+--config_file configs/finetune_tutorial_encode.py \
 --config_dict_name methylai_config_dict \
---print_loss_step 500\
---print_model_output_step 5000\
+--print_loss_step 500 \
+--print_model_output_step 5000 \
 >> result/finetune_tutorial_encode.log 2>&1 &
 ```
 **Environment Setting:**  
@@ -356,6 +356,24 @@ src/script/finetune.py \
 `result/finetune_tutorial_encode.log`: All runtime messages (stdout and stderr) are redirected to this log file. You can change the path and filename as needed.  
 The `nohup` command allows the process to continue running after disconnecting from the terminal.
 
+**Expected output**  
+Upon successful fine-tuning, the following files will be generated in the directory specified by the `'output_folder'` key in `methylai_config_dict`:
+
+1. Training Results File
+- File: `{output_result_file}` (as defined in the configuration)
+- Format: Tab-separated values
+- Contents: Per‑epoch training and validation metrics, including:
+  - Training loss
+  - Validation loss
+  - Pearson correlation coefficient (PCC) on the validation set
+  - Spearman correlation coefficient (SCC) on the validation set
+
+2. Model Snapshots
+- Directory: `{output_folder}/snapshot/`
+- Files: Checkpoint files named `snapshot_epoch_{epoch_number}.pth` (one per epoch)
+- Purpose: These snapshots allow you to resume training from any epoch or for downstream tasks.
+
+---
 ## Fine-tuning Tutorial 2: Using Your Own WGBS Dataset
 
 If you have your own WGBS data processed with Bismark, you can fine-tune MethylAI as follows.
@@ -365,16 +383,15 @@ Prerequisites:
 - Your data should be in a format including columns: chromosome, start, end, methylated_reads, total_reads.
 
 ### 1. Data Preprocessing
+Preprocessing to extract coverage and mc values from Bismark output.
 
 ```bash
-# Download a sample ENCODE WGBS dataset (e.g., from ENCSR000***)
-bash scripts/download_encode_data.sh
-
-# Preprocess the data into the format required by MethylAI
 python scripts/preprocess_encode_data.py \
-  --input_bam data/encode_sample.bam \
-  --reference_genome hg38.fa \
-  --output_file data/encode_processed.h5
+  --input_folder data/bismark \
+  --input_file_suffix bedGraph.gz.bismark.zero.cov \
+  --output_folder data/encode_preprocessed \
+  --output_log_file preprocess.log \
+  --reference_cpg_coordinate_file data/genome/cpg_coordinate_hg38.chr1-22.sort.bed.gz
 ```
 
 ### 2. Fine-tune the Model
