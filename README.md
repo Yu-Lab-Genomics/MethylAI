@@ -366,16 +366,16 @@ The `nohup` command allows the process to continue running after disconnecting f
 Upon successful fine-tuning, the following files will be generated in the directory specified by the `'output_folder'` key in `methylai_config_dict`:
 
 1. Training Results File
-- File: `{output_result_file}` (as defined in the configuration)
-- Format: Tab-separated values
-- Contents: Per‑epoch training and validation metrics, including:
-  - Training loss
-  - Validation loss
-  - Pearson correlation coefficient (PCC) on the validation set
-  - Spearman correlation coefficient (SCC) on the validation set
+File: `{output_result_file}` (as defined in the configuration)  
+Format: Tab-separated values  
+Contents: Per‑epoch training and validation metrics, including:
+- Training loss
+- Validation loss
+- Pearson correlation coefficient (PCC) on the validation set
+- Spearman correlation coefficient (SCC) on the validation set
 
 2. Model Snapshots
-- Directory: `{output_folder}/snapshot/`
+Directory: `{output_folder}/snapshot/`
 - Files: Checkpoint files named `snapshot_epoch_{epoch_number}.pth` (one per epoch)
 - Purpose: These snapshots allow you to resume training from any epoch or for downstream tasks.
 
@@ -388,7 +388,7 @@ If you have your own WGBS data processed with Bismark, you can fine-tune MethylA
 1.1 Preprocessing to extract coverage and mc values from Bismark output.
 
 ```bash
-python scripts/preprocess_encode_data.py \
+python scripts/preprocess_bismark_data.py \
   --input_folder data/bismark \
   --input_file_suffix bedGraph.gz.bismark.zero.cov \
   --output_folder data/bismark_preprocess \
@@ -414,7 +414,7 @@ Rscript src/script/bsmooth.R \
 ```bash
 python src/preprocess/generate_dataset.py \
 --smooth_methylation_file data/bismark_preprocess/smoothed_methylation_data.txt.gz \
---data_info_filedata/bismark_preprocess/smoothed_methylation_info.txt \
+--data_info_file data/bismark_preprocess/smoothed_methylation_info.txt \
 --genome_fasta_file data/genome/hg38.fa \
 --chrom_size_file data/genome/hg38.chrom.sizes \
 --output_folder data/bismark_dataset \
@@ -433,10 +433,9 @@ src/script/finetune.py \
 --print_model_output_step 5000 \
 >> result/finetune_tutorial_bismark.log 2>&1 &
 ```
-
 ---
 
-## Downstream Analysis 1: Identification of DNA Methylation Linked TF Motif Sites
+## Downstream Analysis 1: Identification of DNA Methylation Linked Active TF Motif Sites
 
 ### 1. Preparation
 
@@ -447,19 +446,27 @@ ucsc_tools/bigBedToBed data/genome/JASPAR2024.bb data/genome/JASPAR2024.bed
 awk -F'\t' '$5 > 400' data/genome/JASPAR2024.bed > data/genome/JASPAR2024_400.bed
 ```
 
-### 2. Selection of representative CpG site
-
-Identify DNA methylation linked TF motifs.
-
+### 2. Selection of Representative CpG Site
 ```bash
-python script/run_deepshap.py \
-  --model models/pretrained_model.h5 \
-  --input_fasta data/regions_of_interest.fa \
-  --output_dir results/deepshap/
 ```
 
+### (Optional) Prediction Accuracy Evaluation of Representative CpG Site
+```bash
+```
 
+### Obtain DNA Sequence Attribution Score with DeepSHAP
+```bash
+```
 
+### Motif Attribution Score Statistic
+```bash
+```
+
+### Analysis of Active Motif Site
+```bash
+```
+
+---
 ## Downstream Analysis 2: Interpreting GWAS Variants
 
 Predict the impact of genetic variants on DNA methylation.
