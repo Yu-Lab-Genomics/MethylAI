@@ -129,23 +129,18 @@ def main_train_model_argparse():
                         help='Python configuration file defining model architecture and hyperparameters.')
     parser.add_argument('--config_dict_name', required=True,
                         help='Name of the Python dictionary variable containing configuration parameters.')
+    # optional parameter
     parser.add_argument('--quite', action='store_true', help='')
     parser.add_argument('--print_loss_step', type=int, default=500, help='')
     parser.add_argument('--print_model_output_step', type=int, default=5000, help='')
     args = parser.parse_args()
-    # torchrun 命令：
-    # NCCL_P2P_LEVEL=NVL CUDA_VISIBLE_DEVICES=0,1,2,3 OMP_NUM_THREADS=4 nohup torchrun --standalone --nproc_per_node=gpu
     ddp_setup()
-    # 把模型的BatchNorm层变为SyncBatchNorm
     methylai_parameter_dict = load_config(args.config_file, args.config_dict_name)
     methylai_model = MethylAI(methylai_parameter_dict)
     methylai_model = nn.SyncBatchNorm.convert_sync_batchnorm(methylai_model)
-    # 训练集、验证集
     train_dataloader, validation_dataloader = initialize_train_validation_dataset_dataloader(methylai_parameter_dict)
-    # 优化器、学习率调度器
     step_per_epoch = min(methylai_parameter_dict['max_step_per_epoch'], len(train_dataloader))
     optimizer, scheduler = initialize_optimizer_scheduler(methylai_model, methylai_parameter_dict, step_per_epoch=step_per_epoch)
-    # 初始化训练器
     model_trainer = MethylAITrainer(
         model=methylai_model,
         optimizer=optimizer,
@@ -155,14 +150,14 @@ def main_train_model_argparse():
         max_step_per_epoch=methylai_parameter_dict['max_step_per_epoch'],
         pretrain_snapshot_path=methylai_parameter_dict['pretrain_snapshot_path'],
         snapshot_path=methylai_parameter_dict['snapshot_path'],
-        is_reverse_complement_augmentation=methylai_parameter_dict['reverse_complement_augmentation'],
+        is_reverse_complement_augmentation=methylai_parameter_dict['is_reverse_complement_augmentation'],
         is_load_output_block_pretrain_weight=methylai_parameter_dict['is_load_output_block_pretrain_weight'],
         is_run_validation_at_first=methylai_parameter_dict['is_run_validation_at_first'],
         is_quiet=args.quite,
         save_model_epoch_number=1,
-        minimal_loss_weight_for_validation=0.5,
-        print_loss_step=500,
-        print_model_output_step=5000,
+        minimal_loss_weight_for_validation=1.0,
+        print_loss_step=args.print_loss_step,
+        print_model_output_step=args.print_model_output_step,
         output_folder=methylai_parameter_dict['output_folder'],
         output_result_file=methylai_parameter_dict['output_result_file']
     )

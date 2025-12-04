@@ -9,8 +9,7 @@ from pathlib import Path
 project_root = Path(__file__).parents[3]
 sys.path.insert(0, str(project_root))
 from MethylAI.src.utils.genome_fasta import GenomeFasta
-from MethylAI.src.utils.utils import check_output_folder
-from MethylAI.src.utils.utils import debug_methods
+from MethylAI.src.utils.utils import check_output_folder, debug_methods
 
 @debug_methods
 class MethylationDataset:
@@ -63,13 +62,13 @@ class MethylationDataset:
         self.data_info_df[f'coverage_lower_{self.minimal_coverage}'] = low_coverage_series
         # 计算low_coverage最大阈值，超过max_low_coverage_threshold的样品标记为不保留(keep=No)
         max_low_coverage_threshold = int(self.methylation_df.shape[0] * max_low_coverage_ratio)
-        self.data_info_df['is_keep'] = self.data_info_df[f'coverage_lower_{self.minimal_coverage}'].apply(
+        self.data_info_df['is_pass_qc'] = self.data_info_df[f'coverage_lower_{self.minimal_coverage}'].apply(
             lambda x: 'yes' if x < max_low_coverage_threshold else 'no'
         )
         # 保留methylation_dataframe前4列 + 保留keep=Yes的样本
         self.data_info_df['dataset_index'] = self.data_info_df['dataset_index'].astype(str)
         keep_col_postfix_list = self.data_info_df['dataset_index'][
-            self.data_info_df['is_keep'] == 'yes'].to_list()
+            self.data_info_df['is_pass_qc'] == 'yes'].to_list()
         keep_col_postfix_list = [f'_{index}' for index in keep_col_postfix_list]
         keep_col_list = self.methylation_df.columns[
             self.methylation_df.columns.str.endswith(tuple(keep_col_postfix_list))
@@ -77,8 +76,8 @@ class MethylationDataset:
         keep_col_list = self.methylation_df.columns[0:3].to_list() + keep_col_list
         self.methylation_df = self.methylation_df[keep_col_list]
         # 处理data_info_df，产生new_index，keep=Yes产生从1开始的下标，keep=No则赋值-1
-        self.data_info_df['model_output_index'] = (self.data_info_df['is_keep'] == 'yes').cumsum() - 1
-        no_keep_index = self.data_info_df[self.data_info_df['is_keep'] == 'no'].index
+        self.data_info_df['model_output_index'] = (self.data_info_df['is_pass_qc'] == 'yes').cumsum() - 1
+        no_keep_index = self.data_info_df[self.data_info_df['is_pass_qc'] == 'no'].index
         self.data_info_df.loc[no_keep_index, 'model_output_index'] = -1
         # 设置输出文件名
         if file_name:
@@ -244,7 +243,7 @@ class MethylationDataset:
 
     def output_train_validation_test_set(
             self, train_chr_list: list, validation_chr_list: list, test_chr_list: list,
-            is_output_sampled_train_set: bool, is_output_slice_train_set: bool,
+            output_sampled_train_set_fraction_list: list, is_output_slice_train_set: bool,
             output_format: Literal['pickle', 'feather'] = 'pickle'
     ):
         # 训练集
@@ -252,9 +251,10 @@ class MethylationDataset:
         output_file = f'{self.output_prefix}_train_set'
         self.output_dataset_df(train_set_df, output_file, output_format)
         # 不同长度的训练集
-        if is_output_sampled_train_set:
+        if output_sampled_train_set_fraction_list:
             train_output_prefix = f'{self.output_prefix}_train_set'
-            self.output_sampled_train_set(train_set_df, train_output_prefix, output_format)
+            self.output_sampled_train_set(train_set_df, train_output_prefix, output_sampled_train_set_fraction_list,
+                                          output_format)
         if is_output_slice_train_set:
             self.output_slice_train_set(f'{self.output_prefix}_train_set', train_set_df)
         # 验证集
@@ -267,14 +267,15 @@ class MethylationDataset:
         self.output_dataset_df(test_set_df, output_file, output_format)
 
     def output_sampled_train_set(
-            self, train_set_df, output_prefix, output_format: Literal['pickle', 'feather'] = 'pickle',
-            random_state=42, fraction_tuple = (0.1, 0.2, 0.5)
+            self, train_set_df, output_prefix, fraction_list: list,
+            output_format: Literal['pickle', 'feather'] = 'pickle',
+            random_state=42,
     ):
         # 打乱数据集
         shuffled_train_set_df = train_set_df.sample(frac=1, ignore_index=True, random_state=random_state)
         # 产生不同长度的训练集
         train_set_length = len(shuffled_train_set_df)
-        for frac in fraction_tuple:
+        for frac in fraction_list:
             train_length = int(train_set_length * frac)
             frac_train_set_df = shuffled_train_set_df[0: train_length]
             output_file = f'{output_prefix}_fraction_{frac}'

@@ -13,8 +13,8 @@ class MethylAITrainDataset(Dataset):
                  is_keep_smooth_methylation=True, is_keep_raw_methylation=True, is_keep_window_methylation=True,
                  is_reverse_complement_augmentation=True):
         # dataset
-        self.dataset_file_name = dataset_file
-        self.dataset_dataframe = pd.DataFrame()
+        self.dataset_file = dataset_file
+        self.dataset_df = pd.DataFrame()
         # resampling
         self.bed_dataset_to_repetition_dict = bed_dataset_to_repetition_dict
         self.resample_index_series = pd.Series()
@@ -22,7 +22,7 @@ class MethylAITrainDataset(Dataset):
         self.genome_fasta_file = GenomeFasta(genome_fasta_file)
         self.model_input_dna_length = model_input_dna_length
         # length of dataset
-        self.dataset_dataframe_length = 0
+        self.dataset_df_length = 0
         self.resample_length = 0
         self.dataset_length = 0
         self._input_dataset()
@@ -32,7 +32,6 @@ class MethylAITrainDataset(Dataset):
         self.loss_weight_factor = loss_weight_factor
         self.max_loss_weight_factor = max_loss_weight_factor
         self.is_reverse_complement_augmentation = is_reverse_complement_augmentation
-        #
         self.is_keep_raw_methylation = is_keep_raw_methylation
         self.is_keep_smooth_methylation = is_keep_smooth_methylation
         self.is_keep_window_methylation = is_keep_window_methylation
@@ -54,38 +53,39 @@ class MethylAITrainDataset(Dataset):
     def __getitem__(self, idx):
         # idx < self.dataset_length, return forward DNA
         if idx < self.dataset_length:
-            # idx >= self.dataset_dataframe_length, resample_index
-            if idx >= self.dataset_dataframe_length:
-                resample_index = idx - self.dataset_dataframe_length
+            # idx >= self.dataset_df_length, resample_index
+            if idx >= self.dataset_df_length:
+                resample_index = idx - self.dataset_df_length
                 idx = self.resample_index_series[resample_index]
             dna_one_hot_tensor = self._get_dna_one_hot_tensor(idx, reverse_compliment=False)
             target_tensor, loss_weight_tensor = self._get_predict_target_and_loss_weight(idx)
         # idx > self.dataset_length, return reverse DNA
         else:
             idx = idx - self.dataset_length
-            # idx >= self.dataset_dataframe_length, resample_index
-            if idx >= self.dataset_dataframe_length:
-                resample_index = idx - self.dataset_dataframe_length
+            # idx >= self.dataset_df_length, resample_index
+            if idx >= self.dataset_df_length:
+                resample_index = idx - self.dataset_df_length
                 idx = self.resample_index_series[resample_index]
             dna_one_hot_tensor = self._get_dna_one_hot_tensor(idx, reverse_compliment=True)
             target_tensor, loss_weight_tensor = self._get_predict_target_and_loss_weight(idx)
         return dna_one_hot_tensor, target_tensor, loss_weight_tensor
 
     def _input_dataset(self):
-        if self.dataset_file_name.endswith('pkl'):
-            self.dataset_dataframe = pd.read_pickle(self.dataset_file_name)
-        elif self.dataset_file_name.endswith('txt'):
-            self.dataset_dataframe = pd.read_table(self.dataset_file_name, sep='\t', header=0)
+        print(f'training dataset: {self.dataset_file}')
+        if self.dataset_file.endswith('pkl'):
+            self.dataset_df = pd.read_pickle(self.dataset_file)
+        elif self.dataset_file.endswith('txt'):
+            self.dataset_df = pd.read_table(self.dataset_file, sep='\t', header=0)
         # 记录dataset_dataframe_length
-        self.dataset_dataframe_length = len(self.dataset_dataframe)
+        self.dataset_df_length = len(self.dataset_df)
         # 重置index
-        self.dataset_dataframe.reset_index(drop=True, inplace=True)
+        self.dataset_df.reset_index(drop=True, inplace=True)
         # 新增功能，重新把dataset_dataframe的坐标改到中间，然后再根据需要输入的DNA长度延伸至正确的坐标
-        dataset_length = self.dataset_dataframe.iloc[0, 2] - self.dataset_dataframe.iloc[0, 1]
-        dataset_extent_length = dataset_length // 2
+        cg_length = self.dataset_df.iloc[0, 2] - self.dataset_df.iloc[0, 1]
+        cg_extent_length = cg_length // 2
         model_extent_length = self.model_input_dna_length // 2
-        self.dataset_dataframe.iloc[:, 1] = self.dataset_dataframe.iloc[:, 1] + dataset_extent_length - model_extent_length
-        self.dataset_dataframe.iloc[:, 2] = self.dataset_dataframe.iloc[:, 2] - dataset_extent_length + model_extent_length
+        self.dataset_df.loc[:, 'input_dna_start'] = self.dataset_df.loc[:, 'start'] + cg_extent_length - model_extent_length
+        self.dataset_df.loc[:, 'input_dna_end'] = self.dataset_df.loc[:, 'end'] - cg_extent_length + model_extent_length
 
     def _input_bed_dataset_to_repetition(self):
         # 遍历所有bed_dataset_file
@@ -102,37 +102,40 @@ class MethylAITrainDataset(Dataset):
                 )
         # 计算dataset最终长度
         self.resample_length = len(self.resample_index_series)
-        self.dataset_length = self.dataset_dataframe_length + self.resample_length
+        self.dataset_length = self.dataset_df_length + self.resample_length
         print(f'resample_length: {self.resample_length}')
         print(f'dataset_length: {self.dataset_length}')
 
     def get_dataset_dataframe(self):
-        return self.dataset_dataframe.copy()
+        return self.dataset_df.copy()
 
     def _infer_col_index(self):
         #meth_dataframe中存放smooth_methylation的列index
         self.smooth_methylation_col_index = [
-            index for index, col_name in enumerate(self.dataset_dataframe.columns) if col_name.startswith('smooth_')
+            index for index, col_name in enumerate(self.dataset_df.columns) if col_name.startswith('smooth_')
         ]
         # meth_dataframe中存放raw_methylation的列index
         self.raw_methylation_col_index = [
-            index for index, col_name in enumerate(self.dataset_dataframe.columns) if col_name.startswith('raw_')
+            index for index, col_name in enumerate(self.dataset_df.columns) if col_name.startswith('raw_')
         ]
         # meth_dataframe中存放coverage的列index
         self.coverage_col_index = [
-            index for index, col_name in enumerate(self.dataset_dataframe.columns) if col_name.startswith('coverage_')
+            index for index, col_name in enumerate(self.dataset_df.columns) if col_name.startswith('coverage_')
         ]
         # meth_dataframe中存放window_methylation的列index
         self.window_methylation_col_index = [
-            index for index, col_name in enumerate(self.dataset_dataframe.columns) if col_name.startswith('window_')
+            index for index, col_name in enumerate(self.dataset_df.columns) if col_name.startswith('window_')
         ]
+        coverage_col_len = len(self.coverage_col_index)
+        assert len(self.raw_methylation_col_index) == coverage_col_len
+        assert len(self.smooth_methylation_col_index) == coverage_col_len
 
     def _get_dna_one_hot_tensor(self, idx, reverse_compliment=False):
-        chr_number = self.dataset_dataframe.iloc[idx, 0]
-        dna_start_position = self.dataset_dataframe.iloc[idx, 1]
-        dna_end_position = self.dataset_dataframe.iloc[idx, 2]
+        chr = self.dataset_df.loc[idx, 'chr']
+        dna_start_position = self.dataset_df.loc[idx, 'input_dna_start']
+        dna_end_position = self.dataset_df.loc[idx, 'input_dna_end']
         dna_sequence = self.genome_fasta_file.get_sequence_tuple(
-            chr_number, dna_start_position, dna_end_position, upper_sequence=True
+            chr, dna_start_position, dna_end_position, upper_sequence=True
         )[1]
         if reverse_compliment:
             dna_sequence = get_reverse_complement(dna_sequence)
@@ -140,13 +143,13 @@ class MethylAITrainDataset(Dataset):
         return dna_one_hot_tensor
 
     def _get_predict_target_and_loss_weight(self, idx):
-        smooth_methylation_numpy = self.dataset_dataframe.iloc[idx, self.smooth_methylation_col_index].to_numpy(
+        smooth_methylation_numpy = self.dataset_df.iloc[idx, self.smooth_methylation_col_index].to_numpy(
             dtype=np.float32, copy=True)
-        raw_methylation_numpy = self.dataset_dataframe.iloc[idx, self.raw_methylation_col_index].to_numpy(
+        raw_methylation_numpy = self.dataset_df.iloc[idx, self.raw_methylation_col_index].to_numpy(
             dtype=np.float32, copy=True)
-        window_methylation_numpy = self.dataset_dataframe.iloc[idx, self.window_methylation_col_index].to_numpy(
+        window_methylation_numpy = self.dataset_df.iloc[idx, self.window_methylation_col_index].to_numpy(
             dtype=np.float32, copy=True)
-        coverage_numpy = self.dataset_dataframe.iloc[idx, self.coverage_col_index].to_numpy(
+        coverage_numpy = self.dataset_df.iloc[idx, self.coverage_col_index].to_numpy(
             dtype=np.float32, copy=True)
         # smooth, raw, target tensor
         smooth_methylation_tensor = torch.tensor(smooth_methylation_numpy, dtype=torch.float)
@@ -181,12 +184,12 @@ class MethylAITrainDataset(Dataset):
             loss_weight_tensor = torch.cat([loss_weight_tensor_2, loss_weight_tensor_3], dim=-1)
         elif self.is_keep_smooth_methylation:
             target_tensor = smooth_methylation_tensor
-            loss_weight_tensor = loss_weight_numpy_1
+            loss_weight_tensor = loss_weight_tensor_1
         elif self.is_keep_raw_methylation:
             target_tensor = raw_methylation_tensor
-            loss_weight_tensor = loss_weight_numpy_2
+            loss_weight_tensor = loss_weight_tensor_2
         elif self.is_keep_window_methylation:
             target_tensor = window_methylation_tensor
-            loss_weight_tensor = loss_weight_numpy_3
+            loss_weight_tensor = loss_weight_tensor_3
         return target_tensor, loss_weight_tensor
 

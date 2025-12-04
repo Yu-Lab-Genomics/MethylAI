@@ -1,6 +1,3 @@
-import os
-
-
 class GenomeFasta:
     def __init__(self, fasta_file: str):
         self.fasta_file = fasta_file

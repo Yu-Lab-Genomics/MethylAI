@@ -24,7 +24,7 @@ class MethylAITrainer:
                  is_run_validation_at_first: bool,
                  is_quiet: bool,
                  output_folder: str, output_result_file: str,
-                 save_model_epoch_number=1, minimal_loss_weight_for_validation=1,
+                 save_model_epoch_number=1, minimal_loss_weight_for_validation=1.0,
                  print_loss_step=500, print_model_output_step=5000):
         # GPU id & device & word size
         self.gpu_id = int(os.environ['LOCAL_RANK'])
@@ -47,6 +47,7 @@ class MethylAITrainer:
         self._load_snapshot()
         # 是否需要先运行模型验证
         self.is_run_validation_at_first = is_run_validation_at_first
+        self.is_verbose = not is_quiet
         # loss function
         self.mse_loss = nn.MSELoss(reduction='none')
         self.huber_loss = nn.HuberLoss(reduction='none', delta=0.15)
@@ -61,8 +62,9 @@ class MethylAITrainer:
         # 保存输出文件的文件夹 & 检查文件夹是否存在
         self.output_folder = output_folder
         self.snapshot_folder = f'{self.output_folder}/snapshot'
-        check_output_folder(self.output_folder)
-        check_output_folder(self.snapshot_folder)
+        if self.gpu_id == 0:
+            check_output_folder(self.output_folder)
+            check_output_folder(self.snapshot_folder)
         # 模型训练和验证结果文件
         self.output_result_file = f'{self.output_folder}/{output_result_file}'
         # 保存每个epoch的结果(epoch_number, train_loss, test_loss, PCC, SCC)，完成epoch时输出
@@ -211,7 +213,7 @@ class MethylAITrainer:
             self.window_loss_item = self.window_loss_item + window_loss_item
             self.combined_loss_item = self.combined_loss_item + combined_loss_item
             # 每N batch_index存打印一次训练过程
-            if self.gpu_id == 0 and batch_index % self.print_loss_step == 0:
+            if self.gpu_id == 0 and batch_index % self.print_loss_step == 0 and self.is_verbose:
                 # 获取学习率
                 learning_rate = self.scheduler.get_last_lr()
                 # 计算当前所用的时间
@@ -264,7 +266,7 @@ class MethylAITrainer:
         self.optimizer.step()
         self.scheduler.step()
         # 打印具体信息
-        if self.gpu_id == 0 and batch_index % self.print_model_output_step == 0:
+        if self.gpu_id == 0 and batch_index % self.print_model_output_step == 0  and self.is_verbose:
             torch.set_printoptions(precision=3, threshold=160, edgeitems=4, sci_mode=False)
             print(f'dna_one_hot: {dna_one_hot.shape}')
             print(dna_one_hot.detach())
@@ -330,12 +332,12 @@ class MethylAITrainer:
                         model_output_list.append(all_gather_average_output_tensor.cpu().numpy())
                         true_list.append(all_gather_methylation_level_tensor.cpu().numpy())
                         loss_weight_list.append(all_gather_loss_weight_tensor.cpu().numpy())
-                    if self.gpu_id == 0 and batch_index % self.print_loss_step == 0:
+                    if self.gpu_id == 0 and batch_index % self.print_loss_step == 0 and self.is_verbose:
                         # 打印用时信息
                         print(f'validation batch index: {batch_index:5d}|{total_step:5d} (reverse complement mode)')
                         using_time = datetime.datetime.now() - validation_start_time
                         print(f'validation using time is: {using_time}\n')
-                    if self.gpu_id == 0 and batch_index % self.print_model_output_step == 0:
+                    if self.gpu_id == 0 and batch_index % self.print_model_output_step == 0 and self.is_verbose:
                         print(f'all_gather_output_tensor:\n{all_gather_average_output_tensor}')
                         print(f'all_gather_methylation_level_tensor:\n{all_gather_methylation_level_tensor}')
                         print(f'all_gather_loss_weight_tensor:\n{all_gather_loss_weight_tensor}')
@@ -368,12 +370,12 @@ class MethylAITrainer:
                         model_output_list.append(all_gather_output_tensor.cpu().numpy())
                         true_list.append(all_gather_methylation_level_tensor.cpu().numpy())
                         loss_weight_list.append(all_gather_loss_weight_tensor.cpu().numpy())
-                    if self.gpu_id == 0 and batch_index % self.print_loss_step == 0:
+                    if self.gpu_id == 0 and batch_index % self.print_loss_step == 0 and self.is_verbose:
                         # 打印用时信息
                         print(f'validation batch index: {batch_index:5d}|{total_step:5d}')
                         using_time = datetime.datetime.now() - validation_start_time
                         print(f'validation using time is: {using_time}\n')
-                    if self.gpu_id == 0 and batch_index % self.print_model_output_step == 0:
+                    if self.gpu_id == 0 and batch_index % self.print_model_output_step == 0 and self.is_verbose:
                         print(f'all_gather_output_tensor:\n{all_gather_output_tensor}')
                         print(f'all_gather_methylation_level_tensor:\n{all_gather_methylation_level_tensor}')
                         print(f'all_gather_loss_weight_tensor:\n{all_gather_loss_weight_tensor}')

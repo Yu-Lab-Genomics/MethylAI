@@ -21,7 +21,8 @@ def main_argparse():
     parser.add_argument('--threshold_max_n_base_ratio', type=float, default=0.02, help='')
     parser.add_argument('--threshold_max_missing_sample_ratio', type=float, default=0.5, help='')
     parser.add_argument('--output_format', choices=['pickle', 'feather'], default='pickle', help='')
-    parser.add_argument('--output_sampled_training_set', action='store_true', help='')
+    parser.add_argument('--output_sampled_training_set', nargs='+', type=float,
+                        default=[], help='')
     parser.add_argument('--output_slice_training_set', action='store_true', help='')
     parser.add_argument('--quite', action='store_true', help='')
     parser.add_argument('--calculate_regional_methylation', nargs='+', type=int,
@@ -46,14 +47,14 @@ def main_argparse():
         output_prefix=args.output_prefix
     )
     methylation_dataset.methylation_dataframe_drop_sample(max_low_coverage_ratio=args.threshold_max_missing_cpg_ratio)
-    if args.calculate_regional_methylation:
+    if args.calculate_regional_methylation[0] != 0:
         methylation_dataset.calculate_regional_methylation(args.calculate_regional_methylation)
     methylation_dataset.methylation_dataframe_fill_na()
     methylation_dataset.calculate_input_dna_coordinate()
     methylation_dataset.count_input_dna_n_base_number()
     methylation_dataset.count_missing_sample()
     methylation_dataset.reset_methylation_df_col_order()
-    methylation_dataset.output_methylation_df(args.output_complete_dataset_file)
+    methylation_dataset.output_methylation_df('complete_dataset.txt')
     methylation_dataset.trim_methylation_df(
         max_n_base_ratio=args.threshold_max_n_base_ratio, max_missing_sample_ratio=args.threshold_max_missing_sample_ratio
     )
@@ -62,7 +63,7 @@ def main_argparse():
         validation_chr_list=args.validation_chr,
         test_chr_list=args.test_chr,
         output_format=args.output_format,
-        is_output_sampled_train_set=args.output_sampled_training_set,
+        output_sampled_train_set_fraction_list=args.output_sampled_training_set,
         is_output_slice_train_set=args.output_slice_training_set
     )
 

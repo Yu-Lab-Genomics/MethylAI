@@ -2,11 +2,10 @@ import torch
 from torch.utils.data import Dataset
 import pandas as pd
 import numpy as np
-from MethylAI.src.utils.genome_fasta import GenomeFasta
-from MethylAI.src.utils.dna_sequence import dna_to_one_hot_tensor, get_reverse_complement
-from MethylAI.src.utils.utils import check_output_folder, debug_methods
+from ..utils.genome_fasta import GenomeFasta
+from ..utils.dna_sequence import dna_to_one_hot_tensor, get_reverse_complement
 
-@debug_methods
+
 class MethylAIValidationDataset(Dataset):
     def __init__(self, dataset_file: str, genome_fasta_file: str, model_input_dna_length: int,
                  minimal_coverage: int = 5, loss_weight_factor: float = 5.0, max_loss_weight_factor: float = 1.0,
@@ -48,7 +47,7 @@ class MethylAIValidationDataset(Dataset):
             return forward_dna_one_hot_tensor, target_tensor, loss_weight_tensor
 
     def _input_dataset(self):
-        print(f'input dataset: {self.dataset_file}')
+        print(f'validation dataset: {self.dataset_file}')
         if self.dataset_file.endswith('pkl'):
             self.dataset_df = pd.read_pickle(self.dataset_file)
         elif self.dataset_file.endswith('txt'):
@@ -138,13 +137,13 @@ class MethylAIValidationDataset(Dataset):
             loss_weight_tensor = torch.cat([loss_weight_tensor_2, loss_weight_tensor_3], dim=-1)
         elif self.is_keep_smooth_methylation:
             target_tensor = smooth_methylation_tensor
-            loss_weight_tensor = loss_weight_numpy_1
+            loss_weight_tensor = loss_weight_tensor_1
         elif self.is_keep_raw_methylation:
             target_tensor = raw_methylation_tensor
-            loss_weight_tensor = loss_weight_numpy_2
+            loss_weight_tensor = loss_weight_tensor_2
         elif self.is_keep_window_methylation:
             target_tensor = window_methylation_tensor
-            loss_weight_tensor = loss_weight_numpy_3
+            loss_weight_tensor = loss_weight_tensor_3
         return target_tensor, loss_weight_tensor
 
 

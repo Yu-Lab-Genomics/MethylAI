@@ -92,29 +92,35 @@ You can download the model checkpoints below. We recommend downloading the check
 
 - [Pre-trained model](https://backend.aigenomicsyulab.com/files/model-download/multi_species_pretrain): pre-trained with human dataset and other 11 mammalian species
 - [Fine-tuned model with complete human dataset](https://backend.aigenomicsyulab.com/files/model-download/human_complete): 1574 human samples
-- [Fine-tuned model with ENCODE dataset](https://backend.aigenomicsyulab.com/files/model-download/human_encode): 96 human samples from [ENCODE project](https://www.encodeproject.org/matrix/?type=Experiment&control_type!=*&status=released&perturbed=false&assay_title=WGBS&replicates.library.biosample.donor.organism.scientific_name=Homo+sapiens) (127 samples were available from ENCODE project, 96 samples passed our quality control)
+- [Fine-tuned model with ENCODE dataset](https://backend.aigenomicsyulab.com/files/model-download/human_encode): 96 human samples from [ENCODE project](https://www.encodeproject.org/matrix/?type=Experiment&control_type!=*&status=released&perturbed=false&assay_title=WGBS&replicates.library.biosample.donor.organism.scientific_name=Homo+sapiens) (127 samples were available from ENCODE project, 96 samples passed our sample quality control)
 - [Fine-tuned model with human cell type dataset](https://backend.aigenomicsyulab.com/files/model-download/human_cell_type): 207 human samples from a [nature paper](https://www.nature.com/articles/s41586-022-05580-6)
 - [Fine-tuned model with HEK293T WGBS data](https://backend.aigenomicsyulab.com/files/model-download/hek293t) a WGBS of HEK293T cell line generated in this study
 - Corresponding sample tables are available in our website: https://methylai.aigenomicsyulab.com/
 
-#### 2. Download human reference genome (hg38)
+#### 2. Download human reference genome hg38
 
 Obtain the reference genome for sequence extraction and coordinate mapping:
 
 ```bash
-wget -P data/genome -i data/genome/hg38_genome_link.txt
+wget -c -P data/genome -i data/genome/hg38_genome_link.txt
 gunzip data/genome/hg38.fa.gz
 ```
 
 #### 3. Download CpG Site Coordinates for hg38
 
 ```bash
-wget -P data/genome https://backend.aigenomicsyulab.com/files/model-download/cpg_coordinate_hg38_chr1_22
+wget -c -P data/genome https://backend.aigenomicsyulab.com/files/model-download/cpg_coordinate_hg38_chr1_22
 ```
 Note: This `cpg_coordinate_hg38.chr1-22.sort.bed.gz` was generated using [wgbs_tools](https://github.com/nloyfer/wgbs_tools).
 
----
+#### 4. Download UCSC Genome Browser Tools Dependency
 
+```bash
+wget -c -P ucsc_tools -i ucsc_tools/ucsc_tools_link.txt
+chmod u+x ucsc_tools/bedGraphToBigWig ucsc_tools/bigBedToBed
+```
+
+---
 ## Quick Start: Model Inference Demo
 
 Run a quick demo to ensure your preparation is correct. This will predict methylation levels for a set of CpG site within test set.
@@ -378,33 +384,70 @@ Upon successful fine-tuning, the following files will be generated in the direct
 
 If you have your own WGBS data processed with Bismark, you can fine-tune MethylAI as follows.
 
-Prerequisites:
-
-- Your data should be in a format including columns: chromosome, start, end, methylated_reads, total_reads.
-
-### 1. Data Preprocessing
-Preprocessing to extract coverage and mc values from Bismark output.
+### 1. Prepare train/validation/test dataset files
+1.1 Preprocessing to extract coverage and mc values from Bismark output.
 
 ```bash
 python scripts/preprocess_encode_data.py \
   --input_folder data/bismark \
   --input_file_suffix bedGraph.gz.bismark.zero.cov \
-  --output_folder data/encode_preprocessed \
+  --output_folder data/bismark_preprocess \
   --output_log_file preprocess.log \
   --reference_cpg_coordinate_file data/genome/cpg_coordinate_hg38.chr1-22.sort.bed.gz
+```
+
+1.2 The R script applies the BSmooth algorithm from the bsseq R package to generate both raw and smoothed methylation values for downstream analysis.
+
+```bash
+Rscript src/script/bsmooth.R \
+  data/bismark_preprocess \
+  .preprocessed.txt \
+  64 \
+  smooth_methylation_info.txt \
+  smooth_methylation_data.txt.gz \
+  35 \
+  500
+```
+
+1.3 Generate train/validation/test dataset files
+
+```bash
+python src/preprocess/generate_dataset.py \
+--smooth_methylation_file data/bismark_preprocess/smoothed_methylation_data.txt.gz \
+--data_info_filedata/bismark_preprocess/smoothed_methylation_info.txt \
+--genome_fasta_file data/genome/hg38.fa \
+--chrom_size_file data/genome/hg38.chrom.sizes \
+--output_folder data/bismark_dataset \
+--output_prefix bismark
 ```
 
 ### 2. Fine-tune the Model
 
 ```bash
-CUDA_VISIBLE_DEVICES=0,1,2,3 OMP_NUM_THREADS=4 nohup torchrun --standalone --nproc_per_node=gpu
+CUDA_VISIBLE_DEVICES=0,1,2,3 OMP_NUM_THREADS=4 \
+nohup torchrun --standalone --nproc_per_node=gpu \
+src/script/finetune.py \
+--config_file configs/finetune_tutorial_bismark.py \
+--config_dict_name methylai_config_dict \
+--print_loss_step 500 \
+--print_model_output_step 5000 \
+>> result/finetune_tutorial_bismark.log 2>&1 &
 ```
 
 ---
 
-## Downstream Analysis
+## Downstream Analysis 1: Identification of DNA Methylation Linked TF Motif Sites
 
-### 1. Decoding Cis-Regulatory Logic with DeepSHAP
+### 1. Preparation
+
+Download JASPAR Transcription Factors Track from UCSC Genome Browser and retain TF motif sites with a motif match score > 400:
+```bash
+wget -c -P data/genome https://hgdownload.soe.ucsc.edu/gbdb/hg38/jaspar/JASPAR2024.bb
+ucsc_tools/bigBedToBed data/genome/JASPAR2024.bb data/genome/JASPAR2024.bed
+awk -F'\t' '$5 > 400' data/genome/JASPAR2024.bed > data/genome/JASPAR2024_400.bed
+```
+
+### 2. Selection of representative CpG site
 
 Identify DNA methylation linked TF motifs.
 
@@ -415,12 +458,9 @@ python script/run_deepshap.py \
   --output_dir results/deepshap/
 ```
 
-This script will generate:
 
-- results/deepshap/contributions.tsv: Nucleotide-level contribution scores.
-- results/deepshap/motifs.html: An interactive visualization of identified motifs.
 
-### 2. Interpreting GWAS Variants
+## Downstream Analysis 2: Interpreting GWAS Variants
 
 Predict the impact of genetic variants on DNA methylation.
 
