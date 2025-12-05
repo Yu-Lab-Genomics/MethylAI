@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 project_root = Path(__file__).parents[2]
 sys.path.insert(0, str(project_root))
-from MethylAI.src.model.methylai import MethlyAI
+from MethylAI.src.model.methylai import MethylAI
 from MethylAI.src.utils.utils import load_config
 from MethylAI.src.dataset.validation_dataset import MethylAIValidationDataset
 from MethylAI.src.utils.inference import InferenceTools
@@ -15,7 +15,7 @@ def demo(cpg_coordinate_file: str, genome_fasta_file: str,
          output_folder: str, output_prefix: str):
     # prepare model
     methylai_parameter_dict = load_config(config_file, config_dict_name)
-    methylai_model = MethlyAI(methylai_parameter_dict)
+    methylai_model = MethylAI(methylai_parameter_dict)
     # prepare dataset
     demo_dataset = MethylAIValidationDataset(
         dataset_file=cpg_coordinate_file,
@@ -38,8 +38,8 @@ def demo(cpg_coordinate_file: str, genome_fasta_file: str,
         batch_size=batch_size,
         num_workers=num_workers
     )
-    inference_tools.generate_prediction_dataframe()
-    inference_tools.output_prediction_dataframe()
+    inference_tools.generate_prediction_df()
+    inference_tools.output_prediction_df()
     if is_output_bedgraph_format:
         inference_tools.output_prediction_bedgraph_format()
 

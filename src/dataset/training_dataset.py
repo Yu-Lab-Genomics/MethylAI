@@ -106,7 +106,7 @@ class MethylAITrainDataset(Dataset):
         print(f'resample_length: {self.resample_length}')
         print(f'dataset_length: {self.dataset_length}')
 
-    def get_dataset_dataframe(self):
+    def get_dataset_df(self):
         return self.dataset_df.copy()
 
     def _infer_col_index(self):

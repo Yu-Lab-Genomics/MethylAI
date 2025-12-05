@@ -7,7 +7,6 @@ import os
 import gc
 import subprocess
 import datetime
-
 from ..dataset.validation_dataset import MethylAIValidationDataset
 
 class EvaluationTools:

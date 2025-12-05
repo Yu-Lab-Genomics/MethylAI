@@ -22,7 +22,7 @@ class InferenceTools:
         self.is_reverse_complement_augmentation = is_reverse_complement_augmentation
         # print per step
         self.print_per_step = print_per_step
-        # 保存参数
+        # output folder
         self.output_folder = output_folder
         check_output_folder(self.output_folder)
         self.output_bedgraph_folder = f'{self.output_folder}/bedgraph'
@@ -30,13 +30,12 @@ class InferenceTools:
             self.output_prefix = f'{output_folder}/{output_prefix}_'
         else:
             self.output_prefix = f'{output_folder}/'
-        #################################################################
-        # 这部分用于计算cpg embedding等
-        # dataset_dataframe
-        self.dataset_dataframe = pd.DataFrame()
-        # prediction_dataframe & cpg_embedding_dataframe
-        self.prediction_dataframe = pd.DataFrame()
-        self.cpg_embedding_dataframe = pd.DataFrame()
+        # output dataframe: dataset_df & prediction_df & cpg_embedding_df
+        self.prediction_df_header = []
+        self.dataset_df = pd.DataFrame()
+        self.prediction_df = pd.DataFrame()
+        self.dataset_prediction_df = pd.DataFrame()
+        self.cpg_embedding_df = pd.DataFrame()
         # prediction_list & cpg_embedding_list
         self.prediction_list = []
         self.cpg_embedding_list = []
@@ -46,16 +45,14 @@ class InferenceTools:
         all_state = torch.load(model_stat_file, map_location=self.device, weights_only=False)
         self.model.load_state_dict(all_state['self.model'])
 
-    def generate_prediction_dataframe_header(self, sample_index_file,
-                                             col_prefix_tuple = ('smooth', 'raw', 'window_1000', 'window_500', 'window_200')):
-        # 读取sample_info_dataframe，产生表头
-        sample_info_dataframe = pd.read_table(sample_index_file, sep='\t', header=0)
-        keep_index = sample_info_dataframe[sample_info_dataframe['keep'] == 'Yes'].index
-        col_index_list = sample_info_dataframe.loc[keep_index, 'index'].tolist()
-        prediction_dataframe_header_list = []
+    def generate_prediction_df_header(self, data_info_file,
+                                      col_prefix_tuple = ('smooth', 'raw', 'window_1000', 'window_500', 'window_200')):
+        # 读取data_info_df，产生表头
+        data_info_df = pd.read_table(data_info_file, sep='\t', header=0)
+        keep_index = data_info_df[data_info_df['is_keep'] == 'yes'].index
+        col_index_list = data_info_df.loc[keep_index, 'dataset_index'].tolist()
         for col_prefix in col_prefix_tuple:
-            prediction_dataframe_header_list.extend([f'prediction_{col_prefix}_{index}' for index in col_index_list])
-        return prediction_dataframe_header_list
+            self.prediction_df_header.extend([f'prediction_{col_prefix}_{index}' for index in col_index_list])
 
     def generate_prediction_and_embedding_list(
             self, inference_dataset: MethylAIValidationDataset, batch_size=200, num_workers=8,
@@ -67,8 +64,8 @@ class InferenceTools:
             shuffle=False,
             num_workers=num_workers
         )
-        # 获取evaluation_dataset里的dataframe，存放到self.dataset_dataframe
-        self.dataset_dataframe = inference_dataset.get_dataset_df()
+        # 获取evaluation_dataset里的df，存放到self.dataset_df
+        self.dataset_df = inference_dataset.get_dataset_df()
         # 记录总步数
         total_step = len(evaluation_dataloader)
         # 把模型设置为evaluation模式
@@ -123,56 +120,80 @@ class InferenceTools:
         torch.cuda.empty_cache()
         gc.collect()
 
-    def generate_prediction_dataframe(self):
-        print('generate_dataset_prediction_dataframe')
-        # 产生self.prediction_dataframe
+    def generate_prediction_df(self):
+        # 产生self.prediction_df
         prediction_numpy = np.concatenate(self.prediction_list, axis=0)
-        prediction_dataframe = pd.DataFrame(prediction_numpy)
-        prediction_dataframe_col_name_list = [
-            f'prediction_{index}' for index in range(prediction_numpy.shape[1])
-        ]
-        prediction_dataframe.columns = prediction_dataframe_col_name_list
-        # 为prediction_dataframe拼接self.dataset_dataframe的前4列（基因组坐标信息）
-        self.prediction_dataframe = pd.concat(
-            [self.dataset_dataframe.iloc[:, 0:3], prediction_dataframe], axis=1
+        prediction_df = pd.DataFrame(prediction_numpy)
+        if not self.prediction_df_header:
+            self.prediction_df_header = [
+                f'prediction_{index}' for index in range(prediction_numpy.shape[1])
+            ]
+        prediction_df.columns = self.prediction_df_header
+        # 为prediction_df拼接self.dataset_df的前3列（基因组坐标信息）
+        self.prediction_df = pd.concat(
+            [self.dataset_df.iloc[:, 0:3], prediction_df], axis=1
         )
 
-    def generate_cpg_embedding_dataframe(self):
-        print('generate_cpg_embedding_dataframe')
-        # 产生self.cpg_embedding_dataframe
+    def generate_dataset_prediction_df(self):
+        if self.prediction_df.empty:
+            self.generate_prediction_df()
+        self.dataset_df.reset_index(inplace=True, drop=True)
+        self.dataset_prediction_df = pd.concat(
+            [self.dataset_df, self.prediction_df.iloc[:, 3:]], axis=1
+        )
+
+    def generate_cpg_embedding_df(self):
+        # 产生self.cpg_embedding_df
         cpg_embedding_numpy = np.concatenate(self.cpg_embedding_list, axis=0)
-        cpg_embedding_dataframe = pd.DataFrame(cpg_embedding_numpy)
+        cpg_embedding_df = pd.DataFrame(cpg_embedding_numpy)
         cpg_embedding_col_name_list = [
-            f'embedding_{index}'  for index in range(cpg_embedding_numpy.shape[1])
+            f'embedding_{index}' for index in range(cpg_embedding_numpy.shape[1])
         ]
-        cpg_embedding_dataframe.columns = cpg_embedding_col_name_list
-        # 为cpg_embedding_col_name_list拼接self.dataset_dataframe的前4列（基因组坐标信息）
-        self.cpg_embedding_dataframe = pd.concat(
-            [self.dataset_dataframe.iloc[:, 0:3], cpg_embedding_dataframe], axis=1
+        cpg_embedding_df.columns = cpg_embedding_col_name_list
+        # 为cpg_embedding_col_name_list拼接self.dataset_df的前3列（基因组坐标信息）
+        self.cpg_embedding_df = pd.concat(
+            [self.dataset_df.iloc[:, 0:3], cpg_embedding_df], axis=1
         )
 
-    def output_cpg_embedding_dataframe(self):
+    def output_cpg_embedding_df(self):
         # 输出文件
         file_name = f'{self.output_prefix}cpg_embedding_dataframe.txt'
         print('output:', file_name)
-        self.cpg_embedding_dataframe.to_csv(file_name, sep='\t', index=False)
+        self.cpg_embedding_df.to_csv(file_name, sep='\t', index=False)
 
-    def output_prediction_dataframe(self):
+    def output_prediction_df(self):
         # 输出文件
         file_name = f'{self.output_prefix}prediction_dataframe.txt'
         print('output:', file_name)
-        self.prediction_dataframe.to_csv(file_name, sep='\t', index=False)
+        self.prediction_df.to_csv(file_name, sep='\t', index=False)
+
+    def output_dataset_prediction_df(self):
+        # 输出文件
+        file_name = f'{self.output_prefix}dataset_prediction_dataframe.txt'
+        print('output:', file_name)
+        self.dataset_prediction_df.to_csv(file_name, sep='\t', index=False)
+
+    def select_output_dataset_prediction_df(self, col_index_number: int):
+        coordinate_col_list = self.dataset_prediction_df.columns[0: 3].tolist()
+        col_postfix = f'_{col_index_number}'
+        select_col_list = coordinate_col_list + [col for col in self.dataset_prediction_df.columns.tolist()
+                                                 if col.endswith(col_postfix)]
+        output_dataset_prediction_df = self.dataset_prediction_df.loc[:, select_col_list]
+        # 输出文件
+        file_name = f'{self.output_prefix}col_{col_index_number}_prediction_dataframe.txt'
+        print('output:', file_name)
+        output_dataset_prediction_df.to_csv(file_name, sep='\t', index=False)
 
     def output_prediction_bedgraph_format(self):
         # check bedgraph folder
         check_output_folder(self.output_bedgraph_folder)
-        # prediction_dataframe: 排序并删除完全重复的行
-        self.prediction_dataframe.sort_values(by=['chr', 'start'], inplace=True)
-        self.prediction_dataframe.drop_duplicates(inplace=True)
-        # 输出bedgraph格式，前4列是坐标，因此从4开始遍历
-        for col_index in range(3, len(self.prediction_dataframe.columns)):
-            output_bed_dataframe = self.prediction_dataframe.iloc[:, [0, 1, 2, col_index]]
-            file_name = f'{self.output_bedgraph_folder}/{self.prediction_dataframe.columns[col_index]}.bedgraph'
+        # prediction_df: 排序并删除完全重复的行
+        self.prediction_df.sort_values(by=['chr', 'start'], inplace=True)
+        self.prediction_df.drop_duplicates(inplace=True)
+        # 输出bedgraph格式，前3列是坐标，因此从3开始遍历
+        for col_index in range(3, len(self.prediction_df.columns)):
+            output_bed_df = self.prediction_df.iloc[:, [0, 1, 2, col_index]]
+            file_name = f'{self.output_bedgraph_folder}/{self.prediction_df.columns[col_index]}.bedgraph'
             print('output:', file_name)
-            output_bed_dataframe.to_csv(file_name, sep='\t', index=False, header=False)
+            output_bed_df.to_csv(file_name, sep='\t', index=False, header=False)
 

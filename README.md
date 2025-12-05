@@ -80,8 +80,9 @@ pip install -r requirements.txt
 
 # or install necessary dependencies
 mamba install pytorch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 pytorch-cuda=12.4 -c pytorch -c nvidia
-mamba install pandas==2.2.3 numpy==2.1.3 scipy polars==1.14.0 pyarrow==18.1.0
+mamba install pandas==2.2.3 numpy==2.1.3 scipy polars==1.14.0 pyarrow==18.1.0 captum
 mamba install r-base==4.3.3 r-data.table r-r.utils r-glue bioconductor-bsseq bioconductor-biocparallel
+mamba install bedtools
 ```
 
 ### Download Required Files
@@ -446,16 +447,31 @@ ucsc_tools/bigBedToBed data/genome/JASPAR2024.bb data/genome/JASPAR2024.bed
 awk -F'\t' '$5 > 400' data/genome/JASPAR2024.bed > data/genome/JASPAR2024_400.bed
 ```
 
-### 2. Selection of Representative CpG Site
+### 2. Selection of Representative CpG Sites
 ```bash
+python src/analysis_motif/get_low_me_region_representative_cpg.py \
+--complete_dataset_file data/encode_dataset/encode_complete_dataset.txt \
+--col_index_number 1 \
+--output_folder data/encode_motif \
+--output_prefix encode
 ```
 
-### (Optional) Prediction Accuracy Evaluation of Representative CpG Site
+### 3. Prediction Accuracy Evaluation of Representative CpG Sites
 ```bash
+python src/analysis_motif/evaluate_representative_cpg.py --representative_cpg_file data/encode_motif/encode_smooth_1_low_methylation_region_representative_cpg.txt \
+--dataset_info_file data/encode_dataset/encode_dataset_info.txt \
+--config_file configs/finetune_tutorial_encode.py \
+--config_dict_name methylai_config_dict \
+--model_ckpt result/finetune_tutorial_encode/snapshot/snapshot_epoch_2.pth \
+--gpu_id 0 --batch_size 200 --num_workers 8 \
+--col_index_number 1 --output_folder result/finetune_tutorial_encode/motif_analysis \
+--output_prefix encode \
+--reverse_complement_augmentation
 ```
 
 ### Obtain DNA Sequence Attribution Score with DeepSHAP
 ```bash
+
 ```
 
 ### Motif Attribution Score Statistic

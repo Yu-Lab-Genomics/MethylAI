@@ -54,7 +54,7 @@ class MethylationDataset:
         self.chromosome_size_df = pd.read_table(self.chromosome_size_file, sep='\t', header=None)
         self.chromosome_size_df.columns = ['chr', 'chr_length']
 
-    def methylation_dataframe_drop_sample(self, max_low_coverage_ratio=0.5, file_name=None):
+    def methylation_dataframe_drop_sample(self, max_low_coverage_ratio=0.5, file_name = 'data_info.txt'):
         # 计算self.methylation_df，以'coverage_'开头列 < self.minimal_coverage的个数
         coverage_df = self.methylation_df.filter(regex='^coverage_')
         low_coverage_series = coverage_df.apply(lambda x: (x < self.minimal_coverage).sum())
@@ -80,10 +80,7 @@ class MethylationDataset:
         no_keep_index = self.data_info_df[self.data_info_df['is_pass_qc'] == 'no'].index
         self.data_info_df.loc[no_keep_index, 'model_output_index'] = -1
         # 设置输出文件名
-        if file_name:
-            file_name = f'{self.output_prefix}_{file_name}'
-        else:
-            file_name = f'{self.output_prefix}_data_info.txt'
+        file_name = f'{self.output_prefix}_dataset_info.txt'
         # 输出统计结果
         print('output:', file_name)
         self.data_info_df.to_csv(file_name, sep='\t', index=False)
@@ -250,13 +247,6 @@ class MethylationDataset:
         train_set_df = self.methylation_df[self.methylation_df['chr'].isin(train_chr_list)]
         output_file = f'{self.output_prefix}_train_set'
         self.output_dataset_df(train_set_df, output_file, output_format)
-        # 不同长度的训练集
-        if output_sampled_train_set_fraction_list:
-            train_output_prefix = f'{self.output_prefix}_train_set'
-            self.output_sampled_train_set(train_set_df, train_output_prefix, output_sampled_train_set_fraction_list,
-                                          output_format)
-        if is_output_slice_train_set:
-            self.output_slice_train_set(f'{self.output_prefix}_train_set', train_set_df)
         # 验证集
         validation_set_df = self.methylation_df[self.methylation_df['chr'].isin(validation_chr_list)]
         output_file = f'{self.output_prefix}_validation_set'
@@ -265,6 +255,14 @@ class MethylationDataset:
         test_set_df = self.methylation_df[self.methylation_df['chr'].isin(test_chr_list)]
         output_file = f'{self.output_prefix}_test_set'
         self.output_dataset_df(test_set_df, output_file, output_format)
+        # 不同长度的训练集
+        if output_sampled_train_set_fraction_list:
+            train_output_prefix = f'{self.output_prefix}_train_set'
+            self.output_sampled_train_set(train_set_df, train_output_prefix, output_sampled_train_set_fraction_list,
+                                          output_format)
+        # 单独拆分的训练集
+        if is_output_slice_train_set:
+            self.output_slice_train_set(f'{self.output_prefix}_train_set', train_set_df)
 
     def output_sampled_train_set(
             self, train_set_df, output_prefix, fraction_list: list,
@@ -343,7 +341,7 @@ def main_methylation_dataset():
         train_chr_list=[f'chr{i}' for i in range(1, 10)] + [f'chr{i}' for i in range(12, 23)],
         validation_chr_list=['chr10'],
         test_chr_list=['chr11'],
-        is_output_sampled_train_set=False,
+        output_sampled_train_set_fraction_list=[0.1, 0.2, 0.5],
         is_output_slice_train_set=False
     )
 
