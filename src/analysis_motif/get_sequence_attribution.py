@@ -16,8 +16,8 @@ def main_argparse():
     parser.add_argument('--config_dict_name', required=True, help='')
     parser.add_argument('--model_ckpt', required=True, help='')
     parser.add_argument('--gpu_id', required=True, type=int, help='')
-    parser.add_argument('--analyze_name', required=True, help='')
-    parser.add_argument('--analyze_output_index', required=True, type=int, help='')
+    parser.add_argument('--sample_name', required=True, help='')
+    parser.add_argument('--model_output_index', required=True, type=int, help='')
     parser.add_argument('--n_permutation', required=True, type=int, help='')
     parser.add_argument('--output_folder', required=True, help='')
     # optional parameter
@@ -46,8 +46,8 @@ def main_argparse():
     # get attribution
     captum_tools.iter_captum_dataset(
         captum_dataset=captum_dataset,
-        captum_target_name=args.analyze_name,
-        captum_target_index=args.analyze_output_index,
+        captum_target_name=args.sample_name,
+        captum_target_index=args.model_output_index,
         is_output_bedgraph=args.output_bedgraph
     )
 

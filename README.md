@@ -448,7 +448,7 @@ awk -F'\t' '$5 > 400' data/genome/JASPAR2024.bed > data/genome/JASPAR2024_400.be
 ```bash
 python -u src/analysis_motif/get_low_me_region_representative_cpg.py \
 --complete_dataset_file data/encode_dataset/encode_complete_dataset.txt \
---col_index_number 1 \
+--dataset_index 1 \
 --output_folder data/encode_motif \
 --output_prefix encode
 ```
@@ -468,21 +468,21 @@ python -u src/analysis_motif/evaluate_representative_cpg.py --representative_cpg
 
 ### 4. Obtain DNA Sequence Attribution Score with DeepSHAP
 ```bash
-python -u src/analysis_motif/get_sequence_attribution.py \
+nohup python -u src/analysis_motif/get_sequence_attribution.py \
 --representative_cpg_file data/encode_motif/encode_smooth_1_low_methylation_region_representative_cpg.txt \
 --config_file configs/finetune_tutorial_encode.py \
 --config_dict_name methylai_config_dict \
 --model_ckpt result/finetune_tutorial_encode/snapshot/snapshot_epoch_2.pth \
---gpu_id 1 \
---analyze_name col_1 \
---analyze_output_index 0 \
+--gpu_id 0 \
+--sample_name col_1 \
+--model_output_index 0 \
 --n_permutation 80 --output_folder result/finetune_tutorial_encode/motif_analysis \
 > result/finetune_tutorial_encode/motif_analysis/get_sequence_attribution_col_1.log 2>&1 &
 ```
 
 ### Motif Attribution Score Statistic
 ```bash
-python -u src/analysis_motif/get_motif_statistic.py --sequence_attribution_folder result/finetune_tutorial_encode/motif_analysis/col_1_target0 \
+nohup python -u src/analysis_motif/get_motif_statistic.py --sequence_attribution_folder result/finetune_tutorial_encode/motif_analysis/col_1_target0 \
 --jaspar_bed_file data/genome/JASPAR2024_400.bed \
 --output_folder result/finetune_tutorial_encode/motif_analysis/col_1_target0/motif_statistic \
 --output_prefix encode_col_1 \
@@ -491,7 +491,13 @@ python -u src/analysis_motif/get_motif_statistic.py --sequence_attribution_folde
 
 ### Analysis of Active Motif Site
 ```bash
-
+python -u src/analysis_motif/get_active_motif.py --motif_statistic_file result/finetune_tutorial_encode/motif_analysis/col_1_target0/motif_statistic/encode_col_1_motif_statistic_dataframe.txt \
+--captum_cpg_file result/finetune_tutorial_encode/motif_analysis/col_1_target0/captum_cpg_dataframe.txt \
+--evaluation_file result/finetune_tutorial_encode/motif_analysis/encode_col_1_prediction_dataframe.txt \
+--dataset_index 1 \
+--output_folder result/finetune_tutorial_encode/motif_analysis/col_1_target0/active_motif \
+--output_prefix col_1 \
+--bedtools_path $bedtools > result/finetune_tutorial_encode/motif_analysis/get_active_motif.log 2>&1 &
 ```
 
 ---

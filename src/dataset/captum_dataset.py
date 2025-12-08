@@ -51,7 +51,6 @@ class CaptumDataset(Dataset):
         model_extent_length = self.model_input_dna_length // 2
         self.captum_cpg_df.loc[:, 'input_dna_start'] = self.captum_cpg_df.loc[:, 'start'] + cg_extent_length - model_extent_length
         self.captum_cpg_df.loc[:, 'input_dna_end'] = self.captum_cpg_df.loc[:, 'end'] - cg_extent_length + model_extent_length
-        self.captum_cpg_df = self.captum_cpg_df.loc[:, ['chr', 'start', 'end', 'input_dna_start', 'input_dna_end']]
 
     def get_captum_cpg_df(self):
         return self.captum_cpg_df.copy()

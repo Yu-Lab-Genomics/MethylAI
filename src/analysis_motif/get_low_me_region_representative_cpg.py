@@ -9,7 +9,7 @@ def main_argparse():
     parser = argparse.ArgumentParser(description='Generate modeling dataset')
     # required parameter
     parser.add_argument('--complete_dataset_file', required=True, help='')
-    parser.add_argument('--col_index_number', required=True, type=int, help='')
+    parser.add_argument('--dataset_index', required=True, type=int, help='')
     parser.add_argument('--output_folder', required=True, help='')
     parser.add_argument('--output_prefix', required=True, help='')
     # optional parameter
@@ -25,7 +25,7 @@ def main_argparse():
         output_folder=args.output_folder,
         output_prefix=args.output_prefix,
     )
-    low_methylation_region.select_dataset_col_index(args.col_index_number)
+    low_methylation_region.select_dataset_index(dataset_index=args.dataset_index)
     low_methylation_region.mark_low_me_region(
         threshold_low_me_value=args.threshold_low_methylation,
         threshold_min_cpg_num=args.threshold_min_cpg_number,

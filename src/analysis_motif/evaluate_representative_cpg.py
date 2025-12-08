@@ -19,7 +19,7 @@ def main_argparse():
     parser.add_argument('--gpu_id', required=True, type=int, help='')
     parser.add_argument('--batch_size', required=True, type=int, help='')
     parser.add_argument('--num_workers', required=True, type=int, help='')
-    parser.add_argument('--col_index_number', required=True, type=int, help='')
+    parser.add_argument('--dataset_index', required=True, type=int, help='')
     parser.add_argument('--output_folder', required=True, help='')
     parser.add_argument('--output_prefix', required=True, help='')
     # optional parameter
@@ -53,7 +53,7 @@ def main_argparse():
     )
     inference_tools.generate_prediction_df_header(data_info_file=args.dataset_info_file)
     inference_tools.generate_dataset_prediction_df()
-    inference_tools.select_output_dataset_prediction_df(col_index_number=args.col_index_number)
+    inference_tools.select_output_dataset_prediction_df(dataset_index=args.dataset_index)
 
 
 if __name__ == "__main__":

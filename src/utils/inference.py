@@ -41,7 +41,7 @@ class InferenceTools:
         self.cpg_embedding_list = []
 
     def _load_model_state(self, model_stat_file):
-        print(f'load model stat: {model_stat_file}')
+        print(f'load model state: {model_stat_file}')
         all_state = torch.load(model_stat_file, map_location=self.device, weights_only=False)
         self.model.load_state_dict(all_state['self.model'])
 
@@ -173,14 +173,14 @@ class InferenceTools:
         print('output:', file_name)
         self.dataset_prediction_df.to_csv(file_name, sep='\t', index=False)
 
-    def select_output_dataset_prediction_df(self, col_index_number: int):
+    def select_output_dataset_prediction_df(self, dataset_index: int):
         coordinate_col_list = self.dataset_prediction_df.columns[0: 3].tolist()
-        col_postfix = f'_{col_index_number}'
+        col_postfix = f'_{dataset_index}'
         select_col_list = coordinate_col_list + [col for col in self.dataset_prediction_df.columns.tolist()
                                                  if col.endswith(col_postfix)]
         output_dataset_prediction_df = self.dataset_prediction_df.loc[:, select_col_list]
         # 输出文件
-        file_name = f'{self.output_prefix}col_{col_index_number}_prediction_dataframe.txt'
+        file_name = f'{self.output_prefix}col_{dataset_index}_prediction_dataframe.txt'
         print('output:', file_name)
         output_dataset_prediction_df.to_csv(file_name, sep='\t', index=False)
 

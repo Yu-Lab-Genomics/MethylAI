@@ -4,6 +4,7 @@ import datetime
 import re
 import os
 import subprocess
+from typing import Sequence
 from MethylAI.src.utils.utils import check_output_folder, debug_methods
 
 
@@ -154,7 +155,7 @@ class MotifStatistic:
         self.motif_statistic_pldf.write_csv(output_file, separator='\t')
 
 class EvaluationResult:
-    def __init__(self, evaluation_file: str, true_col_prefix_tuple: tuple, output_folder: str, output_prefix: str):
+    def __init__(self, evaluation_file: str, output_folder: str):
         # 文件名 & 文件
         self.evaluation_file = evaluation_file
         self.evaluation_pldf = pl.DataFrame()
@@ -162,68 +163,69 @@ class EvaluationResult:
         self.true_col_list = []
         self.prediction_col_list = []
         self.coverage_col_list = []
-        self.true_col_prefix_tuple = true_col_prefix_tuple
         self._input_file()
+        # col_name
+        self.true_col = ''
+        self.prediction_col = ''
+        self.coverage_col = ''
+        self.abs_diff_col = ''
         # select_pldf
-        self.select_evaluation_pldf = pl.DataFrame()
+        self.selected_evaluation_pldf = pl.DataFrame()
+        # output setting
+        self.output_folder = output_folder
 
     def _input_file(self):
         print('_input_file')
         self.evaluation_pldf = pl.read_csv(self.evaluation_file, separator='\t', has_header=True)
+
+    def infer_col_name_1(self, true_col_prefix_tuple: tuple, model_output_index: int):
         # 读取true_col_list和prediction_col_list
         self.true_col_list = [col_name for col_name in self.evaluation_pldf.columns if
-                              col_name.startswith(self.true_col_prefix_tuple)]
+                              col_name.startswith(true_col_prefix_tuple)]
         self.prediction_col_list = [col_name for col_name in self.evaluation_pldf.columns if
                                     col_name.startswith('prediction')]
         self.coverage_col_list = [col_name for col_name in self.evaluation_pldf.columns if
                                   col_name.startswith('coverage')]
+        self.true_col = self.true_col_list[model_output_index]
+        self.prediction_col = self.prediction_col_list[model_output_index]
+        self.coverage_col = self.coverage_col_list[model_output_index]
+        self.abs_diff_col = f'abs_diff_{self.true_col}'
 
-    def generate_select_evaluation_pldf(self, model_output_index: int):
-        true_col = self.true_col_list[model_output_index]
-        prediction_col = self.prediction_col_list[model_output_index]
-        coverage_col = self.coverage_col_list[model_output_index]
-        abs_diff_col = f'abs_diff_{true_col}'
-        print(f'true_col: {true_col}, prediction_col: {prediction_col}, coverage_col: {coverage_col}, '
-              f'abs_diff_col: {abs_diff_col}')
-        col_list = self.evaluation_pldf.columns
-        # 定义一个正则表达式来匹配以'_数字'结尾的字符串
-        pattern = re.compile(r'.*_[0-9]+$')
-        # 定义一个空列表用于存放符合条件的字符串
-        select_col_list = []
-        # 预测值和真实值
-        true_and_prediction_col = [true_col, prediction_col, coverage_col]
-        for col in col_list:
-            # 检查字符串是否匹配以'_数字'结尾的字符串
-            if pattern.match(col):
-                # 如果是，则检查是否为true_col或prediction_col
-                if col in true_and_prediction_col:
-                    select_col_list.append(col)
-            else:
-                # 如果字符串不匹配以'_数字'结尾的字符串，直接添加到列表中
-                select_col_list.append(col)
-        # 选择需要的列
-        self.select_evaluation_pldf = self.evaluation_pldf[select_col_list]
-        self.select_evaluation_pldf = self.select_evaluation_pldf.with_columns(
-            (pl.col(true_col) - pl.col(prediction_col)).abs().alias(abs_diff_col),
-            pl.concat_str([pl.col('chr'), pl.col('start')], separator='_').alias('cg_chr_start')
+    def infer_col_name_2(self, dataset_index: int):
+        self.true_col = f'smooth_{dataset_index}'
+        self.prediction_col = f'prediction_smooth_{dataset_index}'
+        self.coverage_col = f'coverage_{dataset_index}'
+        self.abs_diff_col = f'abs_diff_{self.true_col}'
+
+    def generate_selected_evaluation_pldf(self):
+        print(f'true_col: {self.true_col}, prediction_col: {self.prediction_col}, coverage_col: {self.coverage_col}, '
+              f'abs_diff_col: {self.abs_diff_col}')
+        self.selected_evaluation_pldf = self.evaluation_pldf.with_columns(
+            pl.concat_str([pl.col('chr'), pl.col('start')], separator='_').alias('cg_chr_start'),
+            (pl.col(self.true_col) - pl.col(self.prediction_col)).abs().alias(self.abs_diff_col)
         )
-        select_evaluation_pldf = self.select_evaluation_pldf[['cg_chr_start', true_col, prediction_col, coverage_col, abs_diff_col]]
+        self.selected_evaluation_pldf = self.selected_evaluation_pldf[[
+            'cg_chr_start', self.true_col, self.prediction_col, self.coverage_col, self.abs_diff_col
+        ]]
         # 给列重命名
         col_rename_dict = {
-            true_col: 'smooth',
-            prediction_col: 'prediction_smooth',
-            coverage_col: 'coverage',
-            abs_diff_col: 'abs_diff_smooth',
+            self.true_col: 'smooth',
+            self.prediction_col: 'prediction_smooth',
+            self.coverage_col: 'coverage',
+            self.abs_diff_col: 'abs_diff_smooth',
         }
-        select_evaluation_pldf = select_evaluation_pldf.rename(col_rename_dict)
-        select_evaluation_pldf = select_evaluation_pldf.with_columns(
-            pl.lit(true_col).alias('smooth_index'),
+        self.selected_evaluation_pldf = self.selected_evaluation_pldf.rename(col_rename_dict)
+        self.selected_evaluation_pldf = self.selected_evaluation_pldf.with_columns(
+            pl.lit(self.true_col).alias('smooth_index'),
         )
-        return select_evaluation_pldf
 
-    def output_select_evaluation_pldf(self, output_file):
+    def get_selected_evaluation_pldf(self):
+        return self.selected_evaluation_pldf
+
+    def output_selected_evaluation_pldf(self, output_file):
+        output_file = f'{self.output_folder}/{output_file}'
         print(f'output: {output_file}')
-        self.select_evaluation_pldf.write_csv(output_file, separator='\t')
+        self.selected_evaluation_pldf.write_csv(output_file, separator='\t')
 
 
 class MotifAnalysis:
@@ -233,6 +235,9 @@ class MotifAnalysis:
         self.motif_statistic_pldf = pl.DataFrame()
         self.captum_cpg_pldf = pl.DataFrame()
         self._input_file()
+        # 记录
+        self.is_join_evaluation_result = False
+        self.captum_cpg_df_region_col = ''
         # 结果
         self.motif_statistic_filtered_pldf = pl.DataFrame()
         self.active_motif_statistic_pldf = pl.DataFrame()
@@ -260,65 +265,82 @@ class MotifAnalysis:
         self.motif_statistic_pldf = self.motif_statistic_pldf.group_by(
             ['cg_chr_start', 'motif_start', 'motif_end', 'motif_id']
         ).head(1)
-        # 排好行顺序
-        self.motif_statistic_pldf = self.motif_statistic_pldf[[
-            'chr', 'cg_chr_start', 'cg_start', 'cg_end', 'input_dna_start', 'input_dna_end',
-            'motif_id_name', 'motif_id', 'motif_name', 'motif_start', 'motif_end', 'motif_len', 'motif_strand',
-            'motif_relative_start', 'motif_relative_end', 'motif_cg_distance',
-            'motif_score', 'motif_attribution_sum', 'motif_attribution_abs_sum',
-            'motif_attribution_mean', 'motif_attribution_abs_mean', 'motif_activation_score'
-        ]]
 
-    def join_captum_cpg_df_col(self, captum_cpg_file, join_col: str):
+    def join_captum_cpg_pldf_region_col(self, captum_cpg_file, region_col: str):
+        self.captum_cpg_df_region_col = region_col
         self.captum_cpg_pldf = pl.read_csv(captum_cpg_file, separator='\t')
         self.captum_cpg_pldf = self.captum_cpg_pldf.with_columns(
             pl.concat_str([pl.col('chr'), pl.col('start')], separator='_').alias('cg_chr_start'),
         )
-        self.captum_cpg_pldf = self.captum_cpg_pldf[['cg_chr_start', join_col]].unique()
+        self.captum_cpg_pldf = self.captum_cpg_pldf[['cg_chr_start', region_col]].unique()
         self.motif_statistic_pldf = self.motif_statistic_pldf.join(
             self.captum_cpg_pldf, how='left', on=['cg_chr_start'], coalesce=True
         )
-        self.motif_statistic_pldf = self.motif_statistic_pldf[[
-            'chr', 'cg_chr_start', 'low_me_region_id', 'cg_start', 'cg_end', 'input_dna_start', 'input_dna_end',
-            'motif_id_name', 'motif_id', 'motif_name', 'motif_start', 'motif_end', 'motif_len', 'motif_strand',
-            'motif_relative_start', 'motif_relative_end', 'motif_cg_distance',
-            'motif_score', 'motif_attribution_sum', 'motif_attribution_abs_sum',
-            'motif_attribution_mean', 'motif_attribution_abs_mean', 'motif_activation_score'
-        ]]
 
-    def join_evaluation_df(self, evaluation_file: str, true_col_prefix_tuple: tuple, model_output_index: int):
+    def join_evaluation_pldf(self, evaluation_file: str, dataset_index: int):
+        self.is_join_evaluation_result = True
         evaluation_result = EvaluationResult(
             evaluation_file=evaluation_file,
-            true_col_prefix_tuple=true_col_prefix_tuple,
             output_folder=self.output_folder,
-            output_prefix=self.output_prefix
         )
-        evaluation_pldf = evaluation_result.generate_select_evaluation_pldf(model_output_index)
+        evaluation_result.infer_col_name_2(dataset_index=dataset_index)
+        evaluation_result.generate_selected_evaluation_pldf()
+        evaluation_result.output_selected_evaluation_pldf('evaluation_dataframe.txt')
+        evaluation_pldf = evaluation_result.get_selected_evaluation_pldf()
         self.motif_statistic_pldf = self.motif_statistic_pldf.join(
             evaluation_pldf, on='cg_chr_start', how='left', coalesce=True
         )
-        self.motif_statistic_pldf = self.motif_statistic_pldf[[
-            'chr', 'cg_chr_start', 'low_me_region_id', 'cg_start', 'cg_end', 'input_dna_start', 'input_dna_end',
-            'smooth', 'prediction_smooth', 'coverage', 'abs_diff_smooth', 'smooth_index',
-            'motif_id_name', 'motif_id', 'motif_name', 'motif_start', 'motif_end', 'motif_len', 'motif_strand',
-            'motif_relative_start', 'motif_relative_end', 'motif_cg_distance',
-            'motif_score', 'motif_attribution_sum', 'motif_attribution_abs_sum',
-            'motif_attribution_mean', 'motif_attribution_abs_mean', 'motif_activation_score'
-        ]]
 
-    def filter_motif_statistic_df(
+    def filter_motif_statistic_pldf(
             self, threshold_max_motif_cpg_distance: int,  threshold_max_prediction_error: float = None
     ):
         # filter
         if threshold_max_prediction_error:
-            self.motif_statistic_filtered_pldf = self.active_motif_statistic_pldf.filter(
-                ((pl.col('motif_cg_distance').abs() < threshold_max_motif_cpg_distance) and
-                pl.col('abs_diff_smooth') <= threshold_max_prediction_error)
+            self.motif_statistic_filtered_pldf = self.motif_statistic_pldf.filter(
+                ((pl.col('motif_cg_distance').abs() < threshold_max_motif_cpg_distance) &
+                 (pl.col('abs_diff_smooth') <= threshold_max_prediction_error))
             )
         else:
-            self.motif_statistic_filtered_pldf = self.active_motif_statistic_pldf.filter(
+            self.motif_statistic_filtered_pldf = self.motif_statistic_pldf.filter(
                 (pl.col('motif_cg_distance').abs() < threshold_max_motif_cpg_distance)
             )
+
+    def set_motif_statistic_filtered_pldf_col_order(self):
+        if self.is_join_evaluation_result and self.captum_cpg_df_region_col:
+            self.motif_statistic_pldf = self.motif_statistic_pldf[[
+                'chr', 'cg_chr_start', self.captum_cpg_df_region_col, 'cg_start', 'cg_end', 'input_dna_start', 'input_dna_end',
+                'smooth', 'prediction_smooth', 'coverage', 'abs_diff_smooth', 'smooth_index',
+                'motif_id_name', 'motif_id', 'motif_name', 'motif_start', 'motif_end', 'motif_len', 'motif_strand',
+                'motif_relative_start', 'motif_relative_end', 'motif_cg_distance',
+                'motif_score', 'motif_attribution_sum', 'motif_attribution_abs_sum',
+                'motif_attribution_mean', 'motif_attribution_abs_mean', 'motif_activation_score'
+            ]]
+        elif self.is_join_evaluation_result:
+            self.motif_statistic_pldf = self.motif_statistic_pldf[[
+                'chr', 'cg_chr_start', 'cg_start', 'cg_end', 'input_dna_start', 'input_dna_end',
+                'smooth', 'prediction_smooth', 'coverage', 'abs_diff_smooth', 'smooth_index',
+                'motif_id_name', 'motif_id', 'motif_name', 'motif_start', 'motif_end', 'motif_len', 'motif_strand',
+                'motif_relative_start', 'motif_relative_end', 'motif_cg_distance',
+                'motif_score', 'motif_attribution_sum', 'motif_attribution_abs_sum',
+                'motif_attribution_mean', 'motif_attribution_abs_mean', 'motif_activation_score'
+            ]]
+        elif self.captum_cpg_df_region_col:
+            self.motif_statistic_pldf = self.motif_statistic_pldf[[
+                'chr', 'cg_chr_start', self.captum_cpg_df_region_col, 'cg_start', 'cg_end', 'input_dna_start', 'input_dna_end',
+                'smooth', 'prediction_smooth', 'coverage', 'abs_diff_smooth', 'smooth_index',
+                'motif_id_name', 'motif_id', 'motif_name', 'motif_start', 'motif_end', 'motif_len', 'motif_strand',
+                'motif_relative_start', 'motif_relative_end', 'motif_cg_distance',
+                'motif_score', 'motif_attribution_sum', 'motif_attribution_abs_sum',
+                'motif_attribution_mean', 'motif_attribution_abs_mean', 'motif_activation_score'
+            ]]
+        else:
+            self.motif_statistic_pldf = self.motif_statistic_pldf[[
+                'chr', 'cg_chr_start', 'cg_start', 'cg_end', 'input_dna_start', 'input_dna_end',
+                'motif_id_name', 'motif_id', 'motif_name', 'motif_start', 'motif_end', 'motif_len', 'motif_strand',
+                'motif_relative_start', 'motif_relative_end', 'motif_cg_distance',
+                'motif_score', 'motif_attribution_sum', 'motif_attribution_abs_sum',
+                'motif_attribution_mean', 'motif_attribution_abs_mean', 'motif_activation_score'
+            ]]
 
     def generate_active_motif_pldf(self, is_low_methylation: bool, threshold_motif_attribution_mean,):
         assert (threshold_motif_attribution_mean < 0 if is_low_methylation
@@ -339,7 +361,7 @@ class MotifAnalysis:
             pl.col('motif_activation_score').sum().alias('motif_activation_score'),
             pl.col('motif_activation_score').mean().alias('motif_activation_score_mean'),
             pl.col('cg_chr_start').n_unique().alias('motif_regulated_window_number'),
-            pl.col('low_me_region_id').n_unique().alias('motif_regulated_region_number'),
+            pl.col(self.captum_cpg_df_region_col).n_unique().alias('motif_regulated_region_number'),
         )
         motif_active_number_pldf = self.active_motif_statistic_pldf[[
             'chr', 'motif_start', 'motif_end', 'motif_id_name'
@@ -364,8 +386,8 @@ class MotifAnalysis:
             (pl.col('motif_active_number') / pl.col('motif_total_number')).alias('motif_active_ratio'),
             (pl.lit(self.motif_statistic_filtered_pldf['cg_chr_start'].n_unique())).alias('window_total_number'),
             (pl.lit(self.active_motif_statistic_pldf['cg_chr_start'].n_unique())).alias('window_with_active_motif_number'),
-            (pl.lit(self.motif_statistic_filtered_pldf['low_me_region_id'].n_unique())).alias('region_total_number'),
-            (pl.lit(self.active_motif_statistic_pldf['low_me_region_id'].n_unique())).alias('region_with_active_motif_number'),
+            (pl.lit(self.motif_statistic_filtered_pldf[self.captum_cpg_df_region_col].n_unique())).alias('region_total_number'),
+            (pl.lit(self.active_motif_statistic_pldf[self.captum_cpg_df_region_col].n_unique())).alias('region_with_active_motif_number'),
         ).with_columns(
             (pl.col('motif_regulated_region_number') / pl.col('region_total_number')).alias('motif_regulated_region_ratio')
         )

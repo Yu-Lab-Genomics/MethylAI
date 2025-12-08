@@ -122,16 +122,16 @@ class CaptumTools:
         output_dna_one_hot_file = f'{self.numpy_folder}/dna_one_hot.npy'
         output_dna_attribution_file = f'{self.numpy_folder}/dna_attribution.npy'
         output_delta_file = f'{self.numpy_folder}/delta.npy'
-        self.save_numpy_list(self.attribution_list, output_attribution_file)
-        self.save_numpy_list(self.dna_one_hot_list, output_dna_one_hot_file)
-        self.save_numpy_list(self.dna_attribution_list, output_dna_attribution_file)
-        self.save_numpy_list(self.delta_list, output_delta_file)
+        self._save_numpy_list(self.attribution_list, output_attribution_file)
+        self._save_numpy_list(self.dna_one_hot_list, output_dna_one_hot_file)
+        self._save_numpy_list(self.dna_attribution_list, output_dna_attribution_file)
+        self._save_numpy_list(self.delta_list, output_delta_file)
         self.dna_one_hot_list = []
         self.attribution_list = []
         self.dna_attribution_list = []
         self.delta_list = []
 
-    def save_numpy_list(self, numpy_list: list, output_file: str):
+    def _save_numpy_list(self, numpy_list: list, output_file: str):
         output_numpy = np.stack(numpy_list)
         print(f'output: {output_file}')
         np.save(file=output_file, arr=output_numpy)

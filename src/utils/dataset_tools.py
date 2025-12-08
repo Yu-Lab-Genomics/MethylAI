@@ -14,7 +14,7 @@ class LowMethylationRegion:
         self.dataset_pldf = pl.DataFrame()
         self._input_data()
         # 正在处理中的数据
-        self.processing_col_index = 0
+        self.processing_dataset_index = -1
         self.processing_dataset_pldf = pl.DataFrame()
         # 输出设置
         self.output_folder = output_folder
@@ -24,15 +24,15 @@ class LowMethylationRegion:
     def _input_data(self):
         self.dataset_pldf = pl.read_csv(self.complete_dataset_file, separator='\t')
 
-    def select_dataset_col_index(self, col_index_number: int):
-        self.processing_col_index = col_index_number
+    def select_dataset_index(self, dataset_index: int):
+        self.processing_dataset_index = dataset_index
         coordinate_col_list = self.dataset_pldf.columns[0: 3]
-        col_postfix = f'_{self.processing_col_index}'
+        col_postfix = f'_{self.processing_dataset_index}'
         select_col_list = coordinate_col_list + [col for col in self.dataset_pldf.columns if col.endswith(col_postfix)]
         self.processing_dataset_pldf = self.dataset_pldf[select_col_list]
 
     def mark_low_me_region(self, threshold_low_me_value=0.25, threshold_min_cpg_num=5, threshold_min_region_len=0):
-        smooth_col = f'smooth_{self.processing_col_index}'
+        smooth_col = f'smooth_{self.processing_dataset_index}'
         self.processing_dataset_pldf = self.processing_dataset_pldf.with_columns(
             (pl.col(smooth_col) < threshold_low_me_value).alias('is_smooth_low_me')
         ).with_columns(
