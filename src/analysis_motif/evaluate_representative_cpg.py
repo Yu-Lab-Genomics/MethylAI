@@ -9,7 +9,7 @@ from MethylAI.src.utils.utils import load_config
 from MethylAI.src.dataset.validation_dataset import MethylAIValidationDataset
 
 def main_argparse():
-    parser = argparse.ArgumentParser(description='Evaluate prediction accuracy of representative CpG.')
+    parser = argparse.ArgumentParser(description='Evaluate prediction accuracy of representative CpG sites.')
     # required parameter
     parser.add_argument('--representative_cpg_file', required=True, help='')
     parser.add_argument('--dataset_info_file', required=True, help='')
@@ -23,7 +23,7 @@ def main_argparse():
     parser.add_argument('--output_folder', required=True, help='')
     parser.add_argument('--output_prefix', required=True, help='')
     # optional parameter
-    parser.add_argument('--genome_fasta', help='')
+    parser.add_argument('--print_per_step', type=int, default=200, help='')
     parser.add_argument('--reverse_complement_augmentation', action='store_true', help='')
     # 解析参数
     args = parser.parse_args()
@@ -35,18 +35,14 @@ def main_argparse():
         model_state_file=args.model_ckpt,
         gpu_number=args.gpu_id,
         is_reverse_complement_augmentation=args.reverse_complement_augmentation,
-        print_per_step=200,
+        print_per_step=args.print_per_step,
         output_folder=args.output_folder,
         output_prefix=args.output_prefix
     )
     # prepare dataset
-    if args.genome_fasta:
-        genome_fasta_file = args.genome_fasta
-    else:
-        genome_fasta_file = methylai_parameter_dict['genome_fasta_file']
     inference_dataset = MethylAIValidationDataset(
         dataset_file=args.representative_cpg_file,
-        genome_fasta_file=genome_fasta_file,
+        genome_fasta_file=methylai_parameter_dict['genome_fasta_file'],
         model_input_dna_length=methylai_parameter_dict['input_dna_length'],
         is_reverse_complement_augmentation=args.reverse_complement_augmentation
     )

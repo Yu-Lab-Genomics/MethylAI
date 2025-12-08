@@ -78,7 +78,7 @@ class MethylationFile(ABC):
         final_col_list = ['chr', 'start', 'end', 'merge_mc', 'merge_cov']
         rename_final_col_list = ['chr', 'start', 'end', 'mc', 'cov']
         # 记录mc_sum、cov_sum
-        self.record_mc_cov_info_to_log('before merge')
+        self._record_mc_cov_info_to_log('before merge')
         # 拆分正负链
         forward_methylation_pldf = self.methylation_pldf.filter(
             pl.col('strand') == '+'
@@ -104,7 +104,7 @@ class MethylationFile(ABC):
         self.methylation_pldf = merge_methylation_pldf
         self.methylation_pldf.columns = rename_final_col_list
         # 记录mc_sum、cov_sum
-        self.record_mc_cov_info_to_log('after merge')
+        self._record_mc_cov_info_to_log('after merge')
 
     def _merge_forward_reverse_reference_cpg_coordinate(self):
         # 合并前需要保留的列
@@ -115,7 +115,7 @@ class MethylationFile(ABC):
         final_col_list = ['chr', 'start', 'end', 'merge_mc', 'merge_cov']
         rename_final_col_list = ['chr', 'start', 'end', 'mc', 'cov']
         # 记录mc_sum、cov_sum
-        self.record_mc_cov_info_to_log('before merge')
+        self._record_mc_cov_info_to_log('before merge')
         # 拆分正负链
         forward_methylation_pldf = self.reference_cpg_coordinate_pldf.join(
             self.methylation_pldf, on=join_on_col_list, how='left', coalesce=True
@@ -145,9 +145,9 @@ class MethylationFile(ABC):
         self.methylation_pldf = merge_methylation_pldf
         self.methylation_pldf.columns = rename_final_col_list
         # 记录mc_sum、cov_sum
-        self.record_mc_cov_info_to_log('after merge')
+        self._record_mc_cov_info_to_log('after merge')
 
-    def record_mc_cov_info_to_log(self, state: str):
+    def _record_mc_cov_info_to_log(self, state: str):
         # 记录mc_sum、cov_sum
         mc_sum = self.methylation_pldf['mc'].sum()
         cov_sum = self.methylation_pldf['cov'].sum()

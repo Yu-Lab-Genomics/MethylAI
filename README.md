@@ -255,33 +255,30 @@ python src/preprocess/generate_dataset.py \
 Upon successful execution, the following files will be generated in the specified output folder (`data/encode_dataset` in this example):
 
 1. Complete Dataset File  
-- **File:** `encode_complete_dataset.txt`  
-- **Format:** Tab-separated values with header row  
-- **Contents:**
-  - Columns 1-3: BED-format CpG site coordinates (`chr`, `start`, `end`), sorted by chromosome and start position.
-  - Subsequent columns represent methylation levels, organized in three sections:
-    - **Smoothed site methylation levels**: Columns labeled as `smooth_{dataset_index}`
-    - **Raw site methylation levels**: Columns labeled as `raw_{dataset_index}`
-    - **Sequencing coverage**: Columns labeled as `coverage_{dataset_index}`
-    - **Regional methylation levels**: Columns labeled as `window_{window_size}_{dataset_index}` (window sizes: 1000, 500, 200)  
-- **Purpose:** This comprehensive file contains data for all CpG sites and is intended for downstream analyses.
+**File:** `encode_complete_dataset.txt`  
+**Format:** Tab-separated values with header row  
+**Contents:**  
+- Columns 1-3: BED-format CpG site coordinates (`chr`, `start`, `end`), sorted by chromosome and start position.
+- Subsequent columns represent methylation levels, organized in three sections:
+  - **Smoothed site methylation levels**: Columns labeled as `smooth_{dataset_index}`
+  - **Raw site methylation levels**: Columns labeled as `raw_{dataset_index}`
+  - **Sequencing coverage**: Columns labeled as `coverage_{dataset_index}`
+  - **Regional methylation levels**: Columns labeled as `window_{window_size}_{dataset_index}` (window sizes: 1000, 500, 200)  
+**Purpose:** This comprehensive file contains data for all CpG sites and is intended for downstream analyses.
 
 2. Model Training Datasets  
-- **Files:**
-  - `encode_train_set.pkl`
-  - `encode_validation_set.pkl`
-  - `encode_test_set.pkl`
-
+**Files:** `encode_train_set.pkl`, `encode_validation_set.pkl`, `encode_test_set.pkl`  
 **Format:** Python pickle objects.  
 **Contents:** These files contain the training, validation, and test splits, respectively, partitioned by chromosome as specified by the `--training_chr`, `--validation_chr`, and `--test_chr` arguments.  
 **Purpose:** Direct input for model training and evaluation pipelines.
 
 3.Dataset Information  
 **File:** `encode_data_info.txt`  
-**Format:** Tab-separated values with metadata.
+**Format:** Tab-separated values with metadata.  
 **Contents:**  
 - Sample quality control (QC) statistics.  
-- Mapping between `dataset_index`, `model_output_index`, and original filenames.  
+- Mapping between `dataset_index`, `model_output_index`, and original filenames.
+
 **Purpose:** Provides traceability between processed data and original samples, along with QC metrics for downstream interpretation.
 
 **Arguments (required)**  
@@ -449,7 +446,7 @@ awk -F'\t' '$5 > 400' data/genome/JASPAR2024.bed > data/genome/JASPAR2024_400.be
 
 ### 2. Selection of Representative CpG Sites
 ```bash
-python src/analysis_motif/get_low_me_region_representative_cpg.py \
+python -u src/analysis_motif/get_low_me_region_representative_cpg.py \
 --complete_dataset_file data/encode_dataset/encode_complete_dataset.txt \
 --col_index_number 1 \
 --output_folder data/encode_motif \
@@ -458,7 +455,7 @@ python src/analysis_motif/get_low_me_region_representative_cpg.py \
 
 ### 3. Prediction Accuracy Evaluation of Representative CpG Sites
 ```bash
-python src/analysis_motif/evaluate_representative_cpg.py --representative_cpg_file data/encode_motif/encode_smooth_1_low_methylation_region_representative_cpg.txt \
+python -u src/analysis_motif/evaluate_representative_cpg.py --representative_cpg_file data/encode_motif/encode_smooth_1_low_methylation_region_representative_cpg.txt \
 --dataset_info_file data/encode_dataset/encode_dataset_info.txt \
 --config_file configs/finetune_tutorial_encode.py \
 --config_dict_name methylai_config_dict \
@@ -469,17 +466,32 @@ python src/analysis_motif/evaluate_representative_cpg.py --representative_cpg_fi
 --reverse_complement_augmentation
 ```
 
-### Obtain DNA Sequence Attribution Score with DeepSHAP
+### 4. Obtain DNA Sequence Attribution Score with DeepSHAP
 ```bash
-
+python -u src/analysis_motif/get_sequence_attribution.py \
+--representative_cpg_file data/encode_motif/encode_smooth_1_low_methylation_region_representative_cpg.txt \
+--config_file configs/finetune_tutorial_encode.py \
+--config_dict_name methylai_config_dict \
+--model_ckpt result/finetune_tutorial_encode/snapshot/snapshot_epoch_2.pth \
+--gpu_id 1 \
+--analyze_name col_1 \
+--analyze_output_index 0 \
+--n_permutation 80 --output_folder result/finetune_tutorial_encode/motif_analysis \
+> result/finetune_tutorial_encode/motif_analysis/get_sequence_attribution_col_1.log 2>&1 &
 ```
 
 ### Motif Attribution Score Statistic
 ```bash
+python -u src/analysis_motif/get_motif_statistic.py --sequence_attribution_folder result/finetune_tutorial_encode/motif_analysis/col_1_target0 \
+--jaspar_bed_file data/genome/JASPAR2024_400.bed \
+--output_folder result/finetune_tutorial_encode/motif_analysis/col_1_target0/motif_statistic \
+--output_prefix encode_col_1 \
+> result/finetune_tutorial_encode/motif_analysis/get_motif_statistic_col_1.log 2>&1 &
 ```
 
 ### Analysis of Active Motif Site
 ```bash
+
 ```
 
 ---
@@ -488,14 +500,8 @@ python src/analysis_motif/evaluate_representative_cpg.py --representative_cpg_fi
 Predict the impact of genetic variants on DNA methylation.
 
 ```bash
-python scripts/predict_variant_effect.py \
-  --model models/pretrained_model.h5 \
-  --reference_fasta data/reference_sequence.fa \
-  --variant_vcf data/disease_associated_variants.vcf \
-  --output_file results/variant_effects.tsv
 ```
 
-The output will show the predicted change in methylation level for each variant, helping prioritize functionally relevant non-coding variants.
 
 ## Citation
 

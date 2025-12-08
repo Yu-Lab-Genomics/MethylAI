@@ -6,17 +6,19 @@ from ..utils.genome_fasta import GenomeFasta
 from ..utils.dna_sequence import dna_to_one_hot_tensor, get_reverse_complement
 
 class CaptumDataset(Dataset):
-    def __init__(self, captum_cpg_df: pd.DataFrame, genome_fasta_file: str, n_permutation: int,
+    def __init__(self, captum_cpg_file: str, genome_fasta_file: str, model_input_dna_length: int, n_permutation: int,
                  is_reverse_complement_augmentation=False, permutation_random_seed=42,
                  permutation_method: Literal[1, 2] = 1):
         # dataframe
-        self.captum_cpg_df = captum_cpg_df
-        self.captum_cpg_df.reset_index(drop=True, inplace=True)
+        self.captum_cpg_file = captum_cpg_file
+        self.captum_cpg_df = pd.DataFrame()
         # 初始化genome_fasta
         self.genome_fasta = GenomeFasta(genome_fasta_file)
+        self.model_input_dna_length = model_input_dna_length
         # permutation次数
         self.n_permutation = n_permutation
         self.permutation_random_seed = permutation_random_seed
+        self._input_data()
         # permutation method
         if permutation_method == 1:
             self._permutation_method = self._get_permutate_tensor
@@ -40,6 +42,19 @@ class CaptumDataset(Dataset):
             dna_one_hot_tensor = torch.unsqueeze(dna_one_hot_tensor, dim=0)
             base_line_tensor = self._permutation_method(dna_one_hot_tensor)
             return dna_one_hot_tensor, base_line_tensor
+
+    def _input_data(self):
+        self.captum_cpg_df = pd.read_table(self.captum_cpg_file, header=0)
+        self.captum_cpg_df.reset_index(drop=True, inplace=True)
+        cg_length = self.captum_cpg_df.iloc[0, 2] - self.captum_cpg_df.iloc[0, 1]
+        cg_extent_length = cg_length // 2
+        model_extent_length = self.model_input_dna_length // 2
+        self.captum_cpg_df.loc[:, 'input_dna_start'] = self.captum_cpg_df.loc[:, 'start'] + cg_extent_length - model_extent_length
+        self.captum_cpg_df.loc[:, 'input_dna_end'] = self.captum_cpg_df.loc[:, 'end'] - cg_extent_length + model_extent_length
+        self.captum_cpg_df = self.captum_cpg_df.loc[:, ['chr', 'start', 'end', 'input_dna_start', 'input_dna_end']]
+
+    def get_captum_cpg_df(self):
+        return self.captum_cpg_df.copy()
 
     def _get_dna_one_hot_tensor(self, idx, reverse_compliment: bool):
         chr_number = self.captum_cpg_df.loc[idx, 'chr']
