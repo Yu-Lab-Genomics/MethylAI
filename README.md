@@ -221,7 +221,7 @@ python scripts/preprocess_encode_data.py \
 - `--reference_cpg_coordinate_file`: reference CpG coordinate BED file for methylation data integration
 
 #### 2.2. Obtain Raw and Smoothed Methylation Values
-The R script applies the BSmooth algorithm from the [bsseq](https://bioconductor.org/packages/release//bioc/html/bsseq.html) R package to generate both raw and smoothed methylation values for downstream analysis.
+The R script applies the BSmooth algorithm from the bsseq R package  to generate both raw and smoothed methylation values for downstream analysis.
 ```bash
 Rscript src/script/bsmooth.R \
   data/encode_preprocessed \
@@ -273,7 +273,7 @@ Upon successful execution, the following files will be generated in the specifie
 **Purpose:** Direct input for model training and evaluation pipelines.
 
 3.Dataset Information  
-**File:** `encode_data_info.txt`  
+**File:** `encode_dataset_info.txt`  
 **Format:** Tab-separated values with metadata.  
 **Contents:**  
 - Sample quality control (QC) statistics.  
@@ -314,15 +314,15 @@ To fine-tune MethylAI on your processed dataset, you need to modify the configur
 2. **Modify the configuration dictionary**  
    Update the following keys in the `methylai_config_dict` dictionary:
 
-   | Key | Description                                                                                                                                                   | Example Value                                                     |
-   |-----|---------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|
-   | `'output_folder'` | **Absolute path** to the directory where all fine‑tuning outputs (checkpoints, logs, etc.) will be saved.                                                     | `/absolute/path/to/your/output_folder`                            |
-   | `'output_result_file'` | Filename (within `output_folder`) that will store per‑epoch training and validation loss, validation Pearson correlation (PCC), and Spearman correlation (SCC). | `fine_tune_results.txt`                                           |
-   | `'pretrain_snapshot_path'` | **Absolute path** to the pre‑trained checkpoint downloaded in the Preparation step (`MethylAI_pretrain_12_species.pth`).                                      | `/absolute/path/to/checkpoint/MethylAI_pretrain_12_species.pth`   |
-   | `'train_set_file'` | **Absolute path** to the training set file generated in the previous step (`encode_train_set.pkl`).                                                           | `/absolute/path/to/data/encode_dataset/encode_train_set.pkl`      |
-   | `'validation_set_file'` | **Absolute path** to the validation set file (`encode_validation_set.pkl`).                                                                                   | `/absolute/path/to/data/encode_dataset/encode_validation_set.pkl` |
-   | `'genome_fasta_file'` | **Absolute path** to the reference genome FASTA file (`hg38.fa`).                                                                                             | `/absolute/path/to/data/genome/hg38.fa`                           |
-   | `'batch_size'` | Batch size for training. Default is 50 (for RTX4090 24GB GPU). Adjust according to your GPU memory capacity.                                        | `50`                                                              |
+   | Key                          | Description                                                                                                                                                   | Example Value                                                     |
+   |------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|
+   | `'output_folder'`            | **Absolute path** to the directory where all fine‑tuning outputs (checkpoints, logs, etc.) will be saved.                                                     | `/absolute/path/to/your/output_folder`                            |
+   | `'output_result_file'`       | Filename (within `output_folder`) that will store per‑epoch training and validation loss, validation Pearson correlation (PCC), and Spearman correlation (SCC). | `fine_tune_results.txt`                                           |
+   | `'pretrain_checkpoint_path'` | **Absolute path** to the pre‑trained checkpoint downloaded in the Preparation step (`MethylAI_pretrain_12_species.pth`).                                      | `/absolute/path/to/checkpoint/MethylAI_pretrain_12_species.pth`   |
+   | `'train_set_file'`           | **Absolute path** to the training set file generated in the previous step (`encode_train_set.pkl`).                                                           | `/absolute/path/to/data/encode_dataset/encode_train_set.pkl`      |
+   | `'validation_set_file'`      | **Absolute path** to the validation set file (`encode_validation_set.pkl`).                                                                                   | `/absolute/path/to/data/encode_dataset/encode_validation_set.pkl` |
+   | `'genome_fasta_file'`        | **Absolute path** to the reference genome FASTA file (`hg38.fa`).                                                                                             | `/absolute/path/to/data/genome/hg38.fa`                           |
+   | `'batch_size'`               | Batch size for training. Default is 50 (for RTX4090 24GB GPU). Adjust according to your GPU memory capacity.                                        | `50`                                                              |
 
 3. **Save the configuration file**  
    After making the changes, save the file.
@@ -363,7 +363,7 @@ The `nohup` command allows the process to continue running after disconnecting f
 **Expected output**  
 Upon successful fine-tuning, the following files will be generated in the directory specified by the `'output_folder'` key in `methylai_config_dict`:
 
-1. Training Results File
+1. Training Results File  
 File: `{output_result_file}` (as defined in the configuration)  
 Format: Tab-separated values  
 Contents: Per‑epoch training and validation metrics, including:
@@ -372,14 +372,13 @@ Contents: Per‑epoch training and validation metrics, including:
 - Pearson correlation coefficient (PCC) on the validation set
 - Spearman correlation coefficient (SCC) on the validation set
 
-2. Model Snapshots
-Directory: `{output_folder}/snapshot/`
-- Files: Checkpoint files named `snapshot_epoch_{epoch_number}.pth` (one per epoch)
-- Purpose: These snapshots allow you to resume training from any epoch or for downstream tasks.
+2. Model Checkpoint
+Directory: `{output_folder}/checkpoint/`
+- Files: Checkpoint files named `checkpoint_epoch_{epoch_number}.pth` (one per epoch)
+- Purpose: These checkpoints allow you to resume training from any epoch or for downstream tasks.
 
 ---
 ## Fine-tuning Tutorial 2: Using Your Own WGBS Dataset
-
 If you have your own WGBS data processed with Bismark, you can fine-tune MethylAI as follows.
 
 ### 1. Prepare train/validation/test dataset files
@@ -408,7 +407,6 @@ Rscript src/script/bsmooth.R \
 ```
 
 1.3 Generate train/validation/test dataset files
-
 ```bash
 python src/preprocess/generate_dataset.py \
 --smooth_methylation_file data/bismark_preprocess/smoothed_methylation_data.txt.gz \
@@ -420,7 +418,6 @@ python src/preprocess/generate_dataset.py \
 ```
 
 ### 2. Fine-tune the Model
-
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,3 OMP_NUM_THREADS=4 \
 nohup torchrun --standalone --nproc_per_node=gpu \
@@ -433,18 +430,26 @@ src/script/finetune.py \
 ```
 ---
 
-## Downstream Analysis 1: Identification of DNA Methylation Linked Active TF Motif Sites
+## Downstream Analysis Tutorial 1: Identification of DNA Methylation Linked Active TF Motif Sites
+**Prerequisite**: Ensure you have completed Fine-tuning Tutorial 1 to generate the required dataset and fine-tuned model.
 
 ### 1. Preparation
-
-Download JASPAR Transcription Factors Track from UCSC Genome Browser and retain TF motif sites with a motif match score > 400:
+Download the JASPAR Transcription Factor Binding Sites track from the UCSC Genome Browser and filter for high-confidence motif sites (match score > 400).  
+**Note**: This step requires approximately 1 TB of free disk space.
 ```bash
+# Download the JASPAR2024 track in bigBed format
 wget -c -P data/genome https://hgdownload.soe.ucsc.edu/gbdb/hg38/jaspar/JASPAR2024.bb
+
+# Convert bigBed to BED format
 ucsc_tools/bigBedToBed data/genome/JASPAR2024.bb data/genome/JASPAR2024.bed
+
+# Filter motifs with a match score > 400
 awk -F'\t' '$5 > 400' data/genome/JASPAR2024.bed > data/genome/JASPAR2024_400.bed
 ```
 
 ### 2. Selection of Representative CpG Sites
+This step selects representative CpG sites from hypomethylated regions for subsequent attribution score analysis.
+
 ```bash
 python -u src/analysis_motif/get_low_me_region_representative_cpg.py \
 --complete_dataset_file data/encode_dataset/encode_complete_dataset.txt \
@@ -452,8 +457,96 @@ python -u src/analysis_motif/get_low_me_region_representative_cpg.py \
 --output_folder data/encode_motif \
 --output_prefix encode
 ```
+**Expected Output**:
+1. `encode_smooth_1_low_methylation_region.txt`  
+- **Format**: Tab-separated values with header  
+- **Columns**:
+  - Columns 1–3: BED‑format CpG coordinates (`chr`, `start`, `end`)
+  - Subsequent columns: Smoothed, raw, and regional methylation levels and coverage values
+  - Region metadata: `region_id`, `region_cg_num`, `region_len`
+  - Final column `represent_cpg`: Binary flag (0 or 1) indicating whether the site is a representative CpG (1 = selected)
+2. `encode_smooth_1_low_methylation_region_representative_cpg.txt`
+- Subset of the above file containing only rows where `represent_cpg` = 1.
 
-### 3. Prediction Accuracy Evaluation of Representative CpG Sites
+**Arguments (required)**  
+`--complete_dataset_file`: Path to the complete dataset file (e.g., `encode_complete_dataset.txt` generated in Fine‑tuning Tutorial 1).  
+`--dataset_index`: Index of the sample to analyze. The mapping between sample filenames and indices is available in `data/encode_dataset/encode_dataset_info.txt`.  
+`--output_folder`: Directory for output files.  
+`--output_prefix`: Prefix for output filenames.  
+
+**Arguments (optional)**  
+`--threshold_low_methylation`: CpG sites with smoothed methylation level below this threshold are classified as hypomethylated. Default: 0.25  
+`--threshold_min_cpg_number`: Hypomethylated regions containing fewer CpG sites than this value are filtered out. Default: 5  
+`--threshold_min_region_length`: Hypomethylated regions shorter than this length (bp) are filtered out. Default: 50  
+`--window_interval`: For regions shorter than this length (bp), the CpG site nearest the region center is selected. For longer regions, non‑overlapping windows of this length are defined, and the CpG nearest each window center is chosen. Default: 1000
+
+
+### 3. Calculate DNA Sequence Attribution Scores Using DeepSHAP
+This step uses the MethylAI model combined with the DeepSHAP algorithm to compute sequence attribution scores for the DNA sequences corresponding to the representative CpG sites. These scores quantify the contribution of each nucleotide position to the predicted methylation level.  
+
+**Note**: Based on our testing, processing ~100,000 representative CpG sites with default parameters on an RTX 4090 GPU requires approximately 24 hours.
+
+**Full Analysis**
+```bash
+nohup python -u src/analysis_motif/get_sequence_attribution.py \
+--representative_cpg_file data/encode_motif/encode_smooth_1_low_methylation_region_representative_cpg.txt \
+--config_file configs/finetune_tutorial_encode.py \
+--config_dict_name methylai_config_dict \
+--model_ckpt result/finetune_tutorial_encode/snapshot/snapshot_epoch_2.pth \
+--gpu_id 0 \
+--sample_name col_1 \
+--model_output_index 0 \
+--n_permutation 80 --output_folder result/finetune_tutorial_encode/motif_analysis \
+> result/finetune_tutorial_encode/motif_analysis/get_sequence_attribution_smooth_1.log 2>&1 &
+```
+
+**Quick Test (First 1000 Sites)**  
+For a quick pipeline test, you can run the analysis on a subset of 1000 representative CpG sites:
+
+```bash
+# Extract the first 1000 representative CpG sites (including header)
+head -n 1001 data/encode_motif/encode_smooth_1_low_methylation_region_representative_cpg.txt \
+  > data/encode_motif/encode_smooth_1_low_methylation_region_representative_cpg_head_1001.txt
+
+nohup python -u src/analysis_motif/get_sequence_attribution.py \
+--representative_cpg_file data/encode_motif/encode_smooth_1_low_methylation_region_representative_cpg_head_1001.txt \
+--config_file configs/finetune_tutorial_encode.py \
+--config_dict_name methylai_config_dict \
+--model_ckpt result/finetune_tutorial_encode/snapshot/snapshot_epoch_2.pth \
+--gpu_id 0 \
+--sample_name col_1 \
+--model_output_index 0 \
+--n_permutation 80 --output_folder result/finetune_tutorial_encode/motif_analysis \
+> result/finetune_tutorial_encode/motif_analysis/get_sequence_attribution_smooth_1.log 2>&1 &
+```
+**Expected Output**:
+The script creates a folder named `{sample_name}_index_{model_output_index}` within the specified `--output_folder`. This folder contains:  
+1. `representative_cpg_dataframe.txt`: Records the order of CpG sites processed for attribution scores.
+2. `numpy` directory containing numerical results:  
+- `attribution.npy`: Attribution scores.
+- `delta.npy`: delta value. See (https://captum.ai/api/deep_lift_shap.html) for details.
+- `dna_attribution.npy`: DNA‑level attribution.
+- `dna_one_hot.npy`: One‑hot encoded DNA sequences.  
+**Note**: `attribution.npy` and `dna_one_hot.npy` are formatted for direct input to TF‑MoDISco (https://github.com/kundajelab/tfmodisco).  
+3. bedgraph (if --output_bedgraph is set):  
+Contains per‑sequence attribution scores in bedGraph format. Files are named as `index_{model_output_index}_{chr}_{sequence_start}_{cpg_start}.bedgraph`. These can be converted to BigWig format (using `ucsc_tools/bedGraphToBigWig`) for visualization in genome browsers such as the WashU Epigenome Browser (https://epigenomegateway.wustl.edu/).
+
+**Arguments (required)**  
+`--representative_cpg_file`: Path to the `low_methylation_region_representative_cpg.txt` file generated in the previous step.  
+`--config_file`: MethylAI configuration file (Python script). Note: This analysis also uses the `genome_fasta_file` path specified in the config.  
+`--config_dict_name`: Name of the Python dictionary variable in the config file that holds the configuration.  
+`--model_ckpt`: Path to the MethylAI checkpoint file (fine‑tuned model).  
+`--gpu_id`: ID of the GPU to use for computation.  
+`--sample_name`: Descriptive name for the sample (used for naming output folders).
+`--model_output_index`: Index of the model output to compute attribution scores for. **Must correspond to the `dataset_index` used in step 2**. Mapping between sample names, dataset_index, and model_output_index is available in `data/encode_dataset/encode_dataset_info.txt`.  
+`--n_permutation`: DeepSHAP parameter: number of permuted baseline sequences. This value is limited by GPU memory (40 recommended for RTX 4090 24 GB). Larger values increase computation time with minimal effect on results.  
+`--output_folder`: Directory to store output files.
+
+**Arguments (optional)**  
+`--print_per_step`: Print progress every N sequences. Default: 500  
+`--output_bedgraph`: If set, output attribution scores in bedGraph format for visualization.
+
+### 4. Prediction Accuracy Evaluation of Representative CpG Sites
 ```bash
 python -u src/analysis_motif/evaluate_representative_cpg.py --representative_cpg_file data/encode_motif/encode_smooth_1_low_methylation_region_representative_cpg.txt \
 --dataset_info_file data/encode_dataset/encode_dataset_info.txt \
@@ -466,21 +559,7 @@ python -u src/analysis_motif/evaluate_representative_cpg.py --representative_cpg
 --reverse_complement_augmentation
 ```
 
-### 4. Obtain DNA Sequence Attribution Score with DeepSHAP
-```bash
-nohup python -u src/analysis_motif/get_sequence_attribution.py \
---representative_cpg_file data/encode_motif/encode_smooth_1_low_methylation_region_representative_cpg.txt \
---config_file configs/finetune_tutorial_encode.py \
---config_dict_name methylai_config_dict \
---model_ckpt result/finetune_tutorial_encode/snapshot/snapshot_epoch_2.pth \
---gpu_id 0 \
---sample_name col_1 \
---model_output_index 0 \
---n_permutation 80 --output_folder result/finetune_tutorial_encode/motif_analysis \
-> result/finetune_tutorial_encode/motif_analysis/get_sequence_attribution_col_1.log 2>&1 &
-```
-
-### Motif Attribution Score Statistic
+### 5. Motif Attribution Score Statistic
 ```bash
 nohup python -u src/analysis_motif/get_motif_statistic.py --sequence_attribution_folder result/finetune_tutorial_encode/motif_analysis/col_1_target0 \
 --jaspar_bed_file data/genome/JASPAR2024_400.bed \
@@ -489,7 +568,7 @@ nohup python -u src/analysis_motif/get_motif_statistic.py --sequence_attribution
 > result/finetune_tutorial_encode/motif_analysis/get_motif_statistic_col_1.log 2>&1 &
 ```
 
-### Analysis of Active Motif Site
+### 6. Analysis of Active Motif Site
 ```bash
 python -u src/analysis_motif/get_active_motif.py --motif_statistic_file result/finetune_tutorial_encode/motif_analysis/col_1_target0/motif_statistic/encode_col_1_motif_statistic_dataframe.txt \
 --captum_cpg_file result/finetune_tutorial_encode/motif_analysis/col_1_target0/captum_cpg_dataframe.txt \
@@ -500,17 +579,27 @@ python -u src/analysis_motif/get_active_motif.py --motif_statistic_file result/f
 --bedtools_path $bedtools > result/finetune_tutorial_encode/motif_analysis/get_active_motif.log 2>&1 &
 ```
 
+### 
+
+
 ---
-## Downstream Analysis 2: Interpreting GWAS Variants
+## Downstream Analysis Tutorial 2: Interpreting GWAS Variants
 
 Predict the impact of genetic variants on DNA methylation.
 
 ```bash
 ```
 
+## Configuration Dictionary
+
+
+## Reference
+This project utilizes and/or references the following libraries and packages:
+- R package bsseq: https://bioconductor.org/packages/release/bioc/html/bsseq.html
+- Captum (implementation of DeepSHAP): https://captum.ai/
+- wgbstools: https://github.com/nloyfer/wgbs_tools
 
 ## Citation
-
 If you use MethylAI in your research, please cite our preprint/publication:  
 - https://www.biorxiv.org/content/10.1101/2025.11.20.689274v1
 

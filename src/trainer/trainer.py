@@ -9,16 +9,12 @@ import numpy as np
 from scipy.stats import pearsonr, spearmanr
 import os
 import datetime
-import sys
-from pathlib import Path
-project_root = Path(__file__).parents[3]
-sys.path.insert(0, str(project_root))
 from MethylAI.src.utils.utils import check_output_folder
 
 class MethylAITrainer:
     def __init__(self, model: nn.Module, optimizer: optim.AdamW, scheduler: SequentialLR,
                  train_dataloader: DataLoader, validation_dataloader: DataLoader,
-                 max_step_per_epoch: int, pretrain_snapshot_path: str, snapshot_path: str,
+                 max_step_per_epoch: int, pretrain_checkpoint_path: str, checkpoint_path: str,
                  is_reverse_complement_augmentation: bool,
                  is_load_output_block_pretrain_weight: bool,
                  is_run_validation_at_first: bool,
@@ -40,11 +36,11 @@ class MethylAITrainer:
         self.train_dataloader = train_dataloader
         self.validation_dataloader = validation_dataloader
         self.is_reverse_complement_augmentation = is_reverse_complement_augmentation
-        # 如果指定了snapshot_path，则加载该snapshot
-        self.pretrain_snapshot_path = pretrain_snapshot_path
-        self.snapshot_path = snapshot_path
+        # 如果指定了checkpoint_path，则加载该checkpoint
+        self.pretrain_checkpoint_path = pretrain_checkpoint_path
+        self.checkpoint_path = checkpoint_path
         self.is_load_output_block_pretrain_weight = is_load_output_block_pretrain_weight
-        self._load_snapshot()
+        self._load_checkpoint()
         # 是否需要先运行模型验证
         self.is_run_validation_at_first = is_run_validation_at_first
         self.is_verbose = not is_quiet
@@ -61,10 +57,10 @@ class MethylAITrainer:
         self.max_step_per_epoch = max_step_per_epoch
         # 保存输出文件的文件夹 & 检查文件夹是否存在
         self.output_folder = output_folder
-        self.snapshot_folder = f'{self.output_folder}/snapshot'
+        self.output_checkpoint_folder = f'{self.output_folder}/checkpoint'
         if self.gpu_id == 0:
             check_output_folder(self.output_folder)
-            check_output_folder(self.snapshot_folder)
+            check_output_folder(self.output_checkpoint_folder)
         # 模型训练和验证结果文件
         self.output_result_file = f'{self.output_folder}/{output_result_file}'
         # 保存每个epoch的结果(epoch_number, train_loss, test_loss, PCC, SCC)，完成epoch时输出
@@ -77,18 +73,18 @@ class MethylAITrainer:
         self.print_loss_step = print_loss_step
         self.print_model_output_step = print_model_output_step
 
-    def _load_snapshot(self):
-        if self.snapshot_path:
-            print('load snapshot: ', self.snapshot_path)
-            all_state = torch.load(self.snapshot_path, map_location=self.device, weights_only=False)
+    def _load_checkpoint(self):
+        if self.checkpoint_path:
+            print('load checkpoint: ', self.checkpoint_path)
+            all_state = torch.load(self.checkpoint_path, map_location=self.device, weights_only=False)
             # 每次训练完再保存，因此加载的时候running_epoch_number + 1
             self.running_epoch_number = all_state['self.running_epoch_number'] + 1
             self.model.module.load_state_dict(all_state['self.model'])
             self.optimizer.load_state_dict(all_state['self.optimizer'])
             self.scheduler.load_state_dict(all_state['self.scheduler'])
-        elif self.pretrain_snapshot_path:
-            print('load pretrain snapshot: ', self.pretrain_snapshot_path)
-            pretrain_all_state = torch.load(self.pretrain_snapshot_path, map_location=self.device, weights_only=False)
+        elif self.pretrain_checkpoint_path:
+            print('load pretrain checkpoint: ', self.pretrain_checkpoint_path)
+            pretrain_all_state = torch.load(self.pretrain_checkpoint_path, map_location=self.device, weights_only=False)
             pretrain_model_state = pretrain_all_state['self.module']
             model_state_dict = self.model.module.state_dict()
             for key in model_state_dict.keys():
@@ -125,17 +121,17 @@ class MethylAITrainer:
                         print(f'key: {key}; pretrain_key: {pretrain_key}')
             self.model.module.load_state_dict(model_state_dict)
         else:
-            print('Do NOT load snapshot!')
+            print('Do NOT load checkpoint!')
 
-    def _save_snapshot(self, epoch_number):
-        output_file_name = f'{self.snapshot_folder}/snapshot_epoch_{epoch_number}.pth'
+    def _save_checkpoint(self, epoch_number):
+        output_file_name = f'{self.output_checkpoint_folder}/checkpoint_epoch_{epoch_number}.pth'
         torch.save({
             'self.running_epoch_number': epoch_number,
             'self.model' : self.model.module.state_dict(),
             'self.optimizer' : self.optimizer.state_dict(),
             'self.scheduler' : self.scheduler.state_dict()
         }, output_file_name)
-        print('Saved snapshot to', output_file_name)
+        print('Saved checkpoint to', output_file_name)
 
     def _loss_function(self, prediction: torch.tensor, target: torch.tensor, weight: torch.tensor):
         # 计算raw、window输出值的下标
@@ -179,9 +175,9 @@ class MethylAITrainer:
         for epoch_number in range(self.running_epoch_number, total_epoch_number):
             # train
             self._train_epoch(epoch_number)
-            # save snapshot
+            # save checkpoint
             if self.gpu_id == 0 and (epoch_number % self.save_model_epoch_number == 0):
-                self._save_snapshot(epoch_number)
+                self._save_checkpoint(epoch_number)
             # validation
             self._validation_epoch(epoch_number)
 

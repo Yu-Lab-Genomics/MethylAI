@@ -1,3 +1,6 @@
+checkpoint_folder = ''
+output_folder = ''
+
 methylai_config_dict = {
     # trainer设置
     'total_epoch_number': 3,
@@ -6,10 +9,10 @@ methylai_config_dict = {
     'output_block_learning_rate': 0.0006,
     'weight_decay': 0.01,
     'batch_size': 150,
-    'output_folder': '11_finetune_human_atlas',
-    'pretrain_snapshot_path': '1_train/snapshot/snapshot_epoch_1.pth',
+    'output_folder': output_folder,
+    'pretrain_checkpoint_path': f'{checkpoint_folder}/checkpoint/checkpoint_epoch_1.pth',
     'is_load_output_block_pretrain_weight': False,
-    'snapshot_path': None,
+    'checkpoint_path': None,
     'is_run_validation_at_first': False,
     # 模型设置
     'input_block_channel': [20, 190, 30],

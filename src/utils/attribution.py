@@ -40,7 +40,7 @@ class CaptumTools:
         self.print_per_step = print_per_step
 
     def _load_model_state(self):
-        print('load model state:', self.model_state_file)
+        print('load model checkpoint:', self.model_state_file)
         all_state = torch.load(self.model_state_file, map_location=self.device, weights_only=False)
         self.model.load_state_dict(all_state['self.model'])
 
@@ -61,7 +61,7 @@ class CaptumTools:
         check_output_folder(self.numpy_folder)
         # 输出captum_cg_df
         captum_cpg_df = captum_dataset.get_captum_cpg_df()
-        captum_cpg_df.to_csv(f'{self.output_captum_folder}/captum_cpg_dataframe.txt', sep='\t')
+        captum_cpg_df.to_csv(f'{self.output_captum_folder}/representative_cpg_dataframe.txt', sep='\t')
         # captum_dataloader
         captum_dataloader = DataLoader(
             dataset=captum_dataset,
@@ -106,7 +106,7 @@ class CaptumTools:
             # 每self.print_per_step打印一次结果
             if row_i % self.print_per_step == 0:
                 using_time = datetime.datetime.now() - start_time
-                print(f'captum_target_name: {captum_target_name}, captum_target_index: {captum_target_index}')
+                print(f'sample_name: {captum_target_name}, model_output_index: {captum_target_index}')
                 print(f'captum_output_folder: {self.output_captum_folder}')
                 print(f'using_time: {using_time}')
                 print(f'row index: {row_i:5d}|{len(captum_dataloader):5d}')

@@ -1,5 +1,3 @@
-
-
 methylai_config_dict = {
     # trainer设置
     'total_epoch_number': 3,
@@ -8,9 +6,9 @@ methylai_config_dict = {
     'output_block_learning_rate': 0.0005,
     'weight_decay': 0.01,
     'batch_size': 50,
-    'pretrain_snapshot_path': None,
+    'pretrain_checkpoint_path': None,
     'is_load_output_block_pretrain_weight': True,
-    'snapshot_path': None,
+    'checkpoint_path': None,
     'is_run_validation_at_first': False,
     'output_folder': '4_finetune_human1681',
     # model hyper parameter

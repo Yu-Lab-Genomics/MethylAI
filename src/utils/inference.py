@@ -41,7 +41,7 @@ class InferenceTools:
         self.cpg_embedding_list = []
 
     def _load_model_state(self, model_stat_file):
-        print(f'load model state: {model_stat_file}')
+        print(f'load model checkpoint: {model_stat_file}')
         all_state = torch.load(model_stat_file, map_location=self.device, weights_only=False)
         self.model.load_state_dict(all_state['self.model'])
 
