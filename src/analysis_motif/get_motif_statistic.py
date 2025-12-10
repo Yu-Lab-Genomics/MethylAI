@@ -14,8 +14,8 @@ def main_argparse():
     parser.add_argument('--output_prefix', required=True, help='')
     # optional parameter
     parser.add_argument('--print_per_step', type=int, default=500, help='')
-    parser.add_argument('--captum_cpg_file', help='')
-    parser.add_argument('--dna_attribution_file', help='')
+    parser.add_argument('--captum_cpg_file', default='captum_cpg_dataframe.txt', help='')
+    parser.add_argument('--dna_attribution_file', default='numpy/dna_attribution.npy', help='')
     # 解析参数
     args = parser.parse_args()
     # JASPAR TF track
@@ -23,14 +23,8 @@ def main_argparse():
         jaspar_bed_file=args.jaspar_bed_file
     )
     # sequence attribution result
-    if args.captum_cpg_file:
-        captum_cpg_file = args.captum_cpg_file
-    else:
-        captum_cpg_file = f'{args.sequence_attribution_folder}/captum_cpg_dataframe.txt'
-    if args.dna_attribution_file:
-        dna_attribution_file = args.dna_attribution_file
-    else:
-        dna_attribution_file = f'{args.sequence_attribution_folder}/numpy/dna_attribution.npy'
+    captum_cpg_file = f'{args.sequence_attribution_folder}/{args.captum_cpg_file}'
+    dna_attribution_file = f'{args.sequence_attribution_folder}/numpy/{args.dna_attribution_file}'
     captum_result = CaptumResult(
         captum_cpg_file=captum_cpg_file,
         dna_attribution_file=dna_attribution_file

@@ -180,7 +180,7 @@ class InferenceTools:
                                                  if col.endswith(col_postfix)]
         output_dataset_prediction_df = self.dataset_prediction_df.loc[:, select_col_list]
         # 输出文件
-        file_name = f'{self.output_prefix}col_{dataset_index}_prediction_dataframe.txt'
+        file_name = f'{self.output_prefix}dataset_{dataset_index}_evaluation_dataframe.txt'
         print('output:', file_name)
         output_dataset_prediction_df.to_csv(file_name, sep='\t', index=False)
 

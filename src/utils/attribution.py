@@ -51,9 +51,9 @@ class CaptumTools:
     def iter_captum_dataset(
             self, captum_dataset: CaptumDataset, captum_target_name: str, captum_target_index: int, is_output_bedgraph: bool,
     ):
-        print(f'captum_target_name: {captum_target_name}, captum_target_index: {captum_target_index}')
+        print(f'sample_name: {captum_target_name}, model_output_index: {captum_target_index}')
         # 设置文件夹
-        self.output_captum_folder = f'{self.output_folder}/{captum_target_name}_target{captum_target_index}'
+        self.output_captum_folder = f'{self.output_folder}/{captum_target_name}_model_output_index_{captum_target_index}'
         self.bedgraph_folder = f'{self.output_captum_folder}/bedgraph'
         self.numpy_folder = f'{self.output_captum_folder}/numpy'
         check_output_folder(self.output_captum_folder)
