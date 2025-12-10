@@ -53,7 +53,7 @@ class CaptumTools:
     ):
         print(f'sample_name: {captum_target_name}, model_output_index: {captum_target_index}')
         # 设置文件夹
-        self.output_captum_folder = f'{self.output_folder}/{captum_target_name}_model_output_index_{captum_target_index}'
+        self.output_captum_folder = f'{self.output_folder}/{captum_target_name}_index_{captum_target_index}'
         self.bedgraph_folder = f'{self.output_captum_folder}/bedgraph'
         self.numpy_folder = f'{self.output_captum_folder}/numpy'
         check_output_folder(self.output_captum_folder)

@@ -80,7 +80,7 @@ pip install -r requirements.txt
 
 # or install necessary dependencies
 mamba install pytorch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 pytorch-cuda=12.4 -c pytorch -c nvidia
-mamba install pandas==2.2.3 numpy==2.1.3 scipy polars==1.14.0 pyarrow==18.1.0 captum
+mamba install pandas==2.2.3 numpy==2.1.3 scipy==1.14.1 polars==1.14.0 pyarrow==18.1.0 captum==0.6.0
 mamba install r-base==4.3.3 r-data.table r-r.utils r-glue bioconductor-bsseq bioconductor-biocparallel
 mamba install bedtools
 ```
@@ -143,6 +143,31 @@ python demo/demo.py \
 --reverse_complement_augmentation \
 --output_bedgraph
 ```
+**Expected Output**  
+
+The following output files will be generated in the specified output directory:
+
+**1. Primary Output File**: `demo/demo_result/demo_prediction_dataframe.txt`
+- **Format**: Tab-separated file with header
+- **Structure**:
+  - Columns 1-3: BED-format coordinates (chr, start, end)
+  - Subsequent columns: Methylation predictions formatted as `prediction_{index}`
+- **Prediction Types**:
+  - **Smoothed site methylation level** (indices 0-206)
+  - **Raw site methylation level** (indices 207-413)
+  - **Regional methylation levels**:
+    - 1kb window (indices 414-620)
+    - 500bp window (indices 621-827)
+    - 200bp window (indices 828-1034)
+- **Note**: CpG coordinate order corresponds exactly to the input `cpg_coordinate.txt` file. For detailed interpretation of methylation level predictions, please refer to our publication (see **Citation** section).
+
+**2. Visualization Files (Optional)**
+
+When `--output_bedgraph` is specified:  
+
+**Directory**: `demo/demo_result/bedgraph/`  
+**Files**: Multiple bedGraph files named according to prediction columns (e.g., `prediction_0.bedgraph`, `prediction_1.bedgraph`)  
+**Purpose**: Genome browser-compatible tracks for visualizing methylation patterns across genomic regions
 
 **Arguments (required)**  
 `--cpg_coordinate`: BED-formatted file (zero-base) containing CpG site coordinates. Contextual sequences will be extracted for model input.  
@@ -162,33 +187,6 @@ python demo/demo.py \
 
 **⚠️ Technical Note**: The MethylAI model is designed to predict both site-specific and regional methylation levels. Consequently, the program does not validate whether input coordinates correspond to canonical CpG dinucleotides. We caution that prediction accuracy for non-CpG sites has not been systematically evaluated and may not reflect biological reality.
 
-
-### Expected Output
-
-The following output files will be generated in the specified output directory:
-
-**1. Primary Output File: `demo/demo_result/demo_prediction_dataframe.txt`**
-- **Format**: Tab-separated file with header row
-- **Structure**:
-  - Columns 1-3: BED-format coordinates (chr, start, end)
-  - Subsequent columns: Methylation predictions formatted as `prediction_{index}`
-- **Prediction Types**:
-  - **Smoothed site methylation level** (indices 0-206)
-  - **Raw site methylation level** (indices 207-413)
-  - **Regional methylation levels**:
-    - 1kb window (indices 414-620)
-    - 500bp window (indices 621-827)
-    - 200bp window (indices 828-1034)
-- **Note**: CpG coordinate order corresponds exactly to the input `cpg_coordinate.txt` file. For detailed interpretation of methylation level predictions, please refer to our publication (see Citation section).
-
-#### 2. Visualization Files (Optional)
-
-When `--output_bedgraph` is specified:
-
-**Directory**: `demo/demo_result/bedgraph/`  
-**Files**: Multiple bedGraph files named according to prediction columns (e.g., `prediction_0.bedgraph`, `prediction_1.bedgraph`)  
-**Purpose**: Genome browser-compatible tracks for visualizing methylation patterns across genomic regions
-
 ---
 
 ## Fine-tuning Tutorial 1: Using a ENCODE Dataset
@@ -203,6 +201,7 @@ wget -c -P data/encode -i data/encode/encode_wgbs_link.txt
 ### 2. Prepare train/validation/test dataset files
 #### 2.1. Preprocess Data
 Preprocessing to extract coverage and mc values from WGBS data.
+
 ```bash
 python scripts/preprocess_encode_data.py \
   --input_folder data/encode \
@@ -652,7 +651,7 @@ The following files will be generated in the specified `--output_folder`:
 
 `smooth_1_motif_statistic_filtered.txt`: Filtered version of the above, after applying `--threshold_max_motif_cpg_distance` and `--threshold_max_prediction_error`.  
 `smooth_1_active_motif_statistic.txt`: Further filtered to retain only motifs with attribution scores passing `--threshold_motif_attribution_mean`.  
-`smooth_1_active_motif_summary.txt`: Summary per TF motif (`motif_id_name`), including mean `motif_activation_score` and counts of hypomethylated regions/windows where the motif is active.  
+`smooth_1_active_motif_summary.txt`: Summary per TF motif (`motif_id_name`), including mean motif_activation_score and counts of hypomethylated regions/windows where the motif is active.  
 `smooth_1_all_motif.bed`: BED file of all motif sites from smooth_1_motif_statistic_filtered.txt.  
 `smooth_1_active_motif.bed`: BED file of active motif sites from smooth_1_active_motif_statistic.txt.  
 `smooth_1_inactive_motif.bed`: BED file of inactive motif sites, generated by subtracting active motifs from all motifs (bedtools intersect -v).
@@ -672,8 +671,12 @@ The following files will be generated in the specified `--output_folder`:
 `--threshold_motif_attribution_mean`: Threshold on the mean attribution score. Use negative values for hypomethylation analysis and positive values for hypermethylation analysis. Default: -0.02  
 `--bedtools_path`: Path to the bedtools executable. Required to generate the `inactive_motif.bed` file.
 
-### 
+### Note
+Currently, we provide a complete workflow for analyzing active TF motif sites within hypomethylated regions. This pipeline has been extensively validated in our research, ensuring its robustness and reliability. Several identified active motifs and their corresponding TFs have been experimentally confirmed to regulate DNA methylation in hypomethylated regions (see our MethylAI bioRxiv preprint in the **Citation** section).
 
+We plan to extend this framework in future releases to include:
+- Analysis of hypermethylated regions
+- Custom analysis of user‑specified genomic elements for DNA‑methylation‑linked active TF motif discovery
 
 ---
 ## Downstream Analysis Tutorial 2: Interpreting GWAS Variants
