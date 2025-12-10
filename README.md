@@ -43,7 +43,7 @@ MethylAI enables a wide range of functional genomics analyses:
 
 Predict the DNA methylation level for any input DNA sequence across all 1,574 human samples, providing a comprehensive methylation profile.
 
-### Identification of DNA methylation link active motifs:
+### Identification of DNA methylation linked active motifs:
 
 Integrated with the DeepSHAP algorithm, MethylAI can quantify the contribution of each nucleotide to the methylation prediction. This allows for the identification of key sequence features, such as transcription factor (TF) binding motifs, that drive methylation changes.
 
@@ -457,6 +457,9 @@ python -u src/analysis_motif/get_low_me_region_representative_cpg.py \
 --output_prefix encode
 ```
 **Expected Output**:
+
+The following files will be generated in the specified `--output_folder`:
+
 1. `encode_smooth_1_low_methylation_region.txt`  
 - **Format**: Tab-separated values with header  
 - **Columns**:
@@ -518,7 +521,7 @@ nohup python -u src/analysis_motif/get_sequence_attribution.py \
 --n_permutation 80 --output_folder result/finetune_tutorial_encode/motif_analysis \
 > result/finetune_tutorial_encode/motif_analysis/get_sequence_attribution_smooth_1.log 2>&1 &
 ```
-**Expected Output**:
+**Expected Output**:  
 The script creates a folder named `{sample_name}_index_{model_output_index}` within the specified `--output_folder`. This folder contains:  
 1. `representative_cpg_dataframe.txt`: Records the order of CpG sites processed for attribution scores.
 2. `numpy` directory containing numerical results:  
@@ -531,12 +534,12 @@ The script creates a folder named `{sample_name}_index_{model_output_index}` wit
 Contains per‑sequence attribution scores in bedGraph format. Files are named as `index_{model_output_index}_{chr}_{sequence_start}_{cpg_start}.bedgraph`. These can be converted to BigWig format (using `ucsc_tools/bedGraphToBigWig`) for visualization in genome browsers such as the WashU Epigenome Browser (https://epigenomegateway.wustl.edu/).
 
 **Arguments (required)**  
-`--representative_cpg_file`: Path to the `low_methylation_region_representative_cpg.txt` file generated in the previous step.  
+`--representative_cpg_file`: Path to the `low_methylation_region_representative_cpg.txt` file generated in the step 2.  
 `--config_file`: MethylAI configuration file (Python script). Note: This analysis also uses the `genome_fasta_file` path specified in the config.  
 `--config_dict_name`: Name of the Python dictionary variable in the config file that holds the configuration.  
 `--model_ckpt`: Path to the MethylAI checkpoint file.  
 `--gpu_id`: ID of the GPU to use for computation.  
-`--sample_name`: Descriptive name for the sample (used for naming output folders).
+`--sample_name`: Descriptive name for the sample (used for naming output folders).  
 `--model_output_index`: Index of the model output to compute attribution scores for. **Must correspond to the `dataset_index` used in step 2**. Mapping between sample filenames, dataset_index, and model_output_index is available in `data/encode_dataset/encode_dataset_info.txt`.  
 `--n_permutation`: DeepSHAP parameter: number of permuted baseline sequences. This value is limited by GPU memory (40 recommended for RTX 4090 24 GB). Larger values increase computation time with minimal effect on results.  
 `--output_folder`: Directory to store output files.
@@ -549,7 +552,8 @@ Contains per‑sequence attribution scores in bedGraph format. Files are named a
 This step evaluates the prediction accuracy of MethylAI for the representative CpG sites. The evaluation is necessary because the calculation of sequence attribution scores using DeepSHAP assumes that MethylAI's predictions are accurate.
 
 ```bash
-nohup python -u src/analysis_motif/evaluate_representative_cpg.py --representative_cpg_file data/encode_motif/encode_smooth_1_low_methylation_region_representative_cpg.txt \
+nohup python -u src/analysis_motif/evaluate_representative_cpg.py \
+--representative_cpg_file data/encode_motif/encode_smooth_1_low_methylation_region_representative_cpg.txt \
 --dataset_info_file data/encode_dataset/encode_dataset_info.txt \
 --config_file configs/finetune_tutorial_encode.py \
 --config_dict_name methylai_config_dict \
@@ -558,12 +562,12 @@ nohup python -u src/analysis_motif/evaluate_representative_cpg.py --representati
 --batch_size 200 \
 --num_workers 8 \
 --dataset_index 1 \
---output_folder result/finetune_tutorial_encode/motif_analysis/ \
+--output_folder result/finetune_tutorial_encode/motif_analysis \
 --output_prefix encode \
 --reverse_complement_augmentation
 ```
 **Expected Output**  
-**File**: `encode_col_1_prediction_dataframe.txt`  
+**File**: `encode_smooth_1_evaluation_dataframe.txt`  
 **Format**: Tab‑separated values with header  
 **Columns**:  
 - Columns 1‑3: BED‑format coordinates of representative CpG sites (`chr`, `start`, `end`)
@@ -584,14 +588,15 @@ nohup python -u src/analysis_motif/evaluate_representative_cpg.py --representati
 `--output_prefix`: Prefix for output filenames.  
 
 **Arguments (optional)**  
-`--print_per_step`: Print progress every N steps. Default: 200
+`--print_per_step`: Print progress every N steps. Default: 200  
 `--reverse_complement_augmentation`: If set, enable reverse complement data augmentation during inference.
 
 ### 5. Motif Attribution Score Statistic
 This step calculates motif attribution scores by aggregating sequence attribution scores across all representative CpG sites that overlap with transcription factor binding motifs (from `JASPAR2024_400.bed` generated in Step 1).
 
 ```bash
-nohup python -u src/analysis_motif/get_motif_statistic.py --sequence_attribution_folder result/finetune_tutorial_encode/motif_analysis/smooth_1_index_0 \
+nohup python -u src/analysis_motif/get_motif_statistic.py \
+--sequence_attribution_folder result/finetune_tutorial_encode/motif_analysis/smooth_1_index_0 \
 --jaspar_bed_file data/genome/JASPAR2024_400.bed \
 --output_folder result/finetune_tutorial_encode/motif_analysis/smooth_1_index_0/motif_statistic \
 --output_prefix encode_smooth_1 \
@@ -629,11 +634,12 @@ nohup python -u src/analysis_motif/get_motif_statistic.py --sequence_attribution
 `--captum_cpg_file`: Specify a different file for representative CpG information (if changed from default). Default: `representative_cpg_dataframe.txt` (in sequence_attribution_folder)  
 `--dna_attribution_file`: Specify a different file for DNA attribution scores (if changed from default). Default: `numpy/dna_attribution.npy` (in sequence_attribution_folder)	
 
-### 6. Analysis of Active Motif Site
+### 6. Identification of Active Motif Sites
 This step filters for active motif sites based on a set of thresholds to identify transcription factor binding motifs that exhibit significant attribution scores within hypomethylated regions.
 
 ```bash
-python -u src/analysis_motif/get_active_motif.py --motif_statistic_file result/finetune_tutorial_encode/motif_analysis/smooth_1_index_0/motif_statistic/encode_smooth_1_motif_statistic_dataframe.txt \
+python -u src/analysis_motif/get_active_motif.py \
+--motif_statistic_file result/finetune_tutorial_encode/motif_analysis/smooth_1_index_0/motif_statistic/encode_smooth_1_motif_statistic_dataframe.txt \
 --captum_cpg_file result/finetune_tutorial_encode/motif_analysis/smooth_1_index_0/captum_cpg_dataframe.txt \
 --evaluation_file result/finetune_tutorial_encode/motif_analysis/encode_col_1_prediction_dataframe.txt \
 --dataset_index 1 \
@@ -642,16 +648,21 @@ python -u src/analysis_motif/get_active_motif.py --motif_statistic_file result/f
 --bedtools_path `which bedtools` > result/finetune_tutorial_encode/motif_analysis/get_active_motif.log 2>&1 &
 ```
 **Expected Output**  
+
 The following files will be generated in the specified `--output_folder`:  
+
 `evaluation_dataframe.txt`: Prediction accuracy metrics for each representative CpG site.  
+
 `smooth_1_motif_statistic.txt`: Tab‑separated file containing unfiltered motif statistics, including:  
 - Representative CpG site information: `cg_chr_start` (CpG ID), `low_me_region_id`, `cg_start`, `cg_end`, `input_dna_start`, `input_dna_end`, `smooth`, `prediction_smooth`, `coverage`, `abs_diff_smooth`, `smooth_index`.  
 - Motif information: `motif_id_name`, `motif_id`, `motif_name`, `motif_start`, `motif_end`, `motif_len`, `motif_strand`, `motif_relative_start`, `motif_relative_end`, `motif_cg_distance`, `motif_score`.  
 - Attribution score statistics: `motif_attribution_sum`, `motif_attribution_abs_sum`, `motif_attribution_mean`, `motif_attribution_abs_mean`, `motif_activation_score`.  
 
 `smooth_1_motif_statistic_filtered.txt`: Filtered version of the above, after applying `--threshold_max_motif_cpg_distance` and `--threshold_max_prediction_error`.  
+
 `smooth_1_active_motif_statistic.txt`: Further filtered to retain only motifs with attribution scores passing `--threshold_motif_attribution_mean`.  
 `smooth_1_active_motif_summary.txt`: Summary per TF motif (`motif_id_name`), including mean motif_activation_score and counts of hypomethylated regions/windows where the motif is active.  
+
 `smooth_1_all_motif.bed`: BED file of all motif sites from smooth_1_motif_statistic_filtered.txt.  
 `smooth_1_active_motif.bed`: BED file of active motif sites from smooth_1_active_motif_statistic.txt.  
 `smooth_1_inactive_motif.bed`: BED file of inactive motif sites, generated by subtracting active motifs from all motifs (bedtools intersect -v).
@@ -687,7 +698,6 @@ Predict the impact of genetic variants on DNA methylation.
 ```
 
 ## Configuration Dictionary
-
 
 ## Reference
 This project utilizes and/or references the following libraries and packages:
