@@ -507,7 +507,6 @@ The following files will be generated in the specified `--output_folder`:
 `--threshold_min_region_length`: Hypomethylated regions shorter than this length (bp) are filtered out. Default: 50  
 `--window_interval`: For regions shorter than this length (bp), the CpG site nearest the region center is selected. For longer regions, non‑overlapping windows of this length are defined, and the CpG nearest each window center is chosen. Default: 1000
 
-
 ### 3. Calculate DNA Sequence Attribution Scores Using DeepSHAP
 This step uses the MethylAI model combined with the DeepSHAP algorithm to estimate sequence attribution scores for the DNA sequences corresponding to the representative CpG sites. These scores quantify the contribution of each nucleotide position to the predicted methylation level.  
 
@@ -663,7 +662,7 @@ nohup python -u src/analysis_motif/get_motif_statistic.py \
 **Arguments (optional)**  
 `--print_per_step`: Print progress every N steps. Default: 500  
 `--captum_cpg_file`: Specify a different file for representative CpG information (if changed from default). Default: `representative_cpg_dataframe.txt` (in sequence_attribution_folder)  
-`--dna_attribution_file`: Specify a different file for DNA attribution scores (if changed from default). Default: `numpy/dna_attribution.npy` (in sequence_attribution_folder)	
+`--dna_attribution_file`: Specify a different file for DNA attribution scores (if changed from default). Default: `numpy/dna_attribution.npy` (in sequence_attribution_folder)|
 
 ### 6. Identification of Active Motif Sites
 
@@ -724,7 +723,7 @@ We plan to extend this framework in future releases to include:
 
 ---
 ## Downstream Analysis Tutorial 2: Interpreting GWAS Variants
-**Prerequisite:** Complete [Fine‑tuning Tutorial 1](#fine-tune-the-model) to generate the required dataset and fine‑tuned model, and [Downstream Analysis Tutorial 1](#downstream-analysis-1-identification-of-dna-methylation-linked-active-tf-motif-sites) to obtain active motif sites.
+**Prerequisite:** Complete **Fine‑tuning Tutorial 1** to generate the required dataset and fine‑tuned model, and **Downstream Analysis Tutorial 1** to obtain active motif sites.
 
 **Rationale:** Variants that intersect with active motif sites are more biological interpretable (e.g., a variant may affect DNA methylation by altering a transcription factor binding site). Furthermore, our mQTL validation shows that MethylAI achieves >87% accuracy in predicting the direction of methylation changes for variants located within active motif sites (see the MethylAI bioRxiv preprint in the **Citation** section).
 
@@ -909,7 +908,69 @@ We plan to extend this framework in future releases to include:
 - Analysis of variants in hypermethylated regions
 - More flexible variant‑effect analysis pipelines for broader genomic contexts
 
-## Configuration Dictionary
+## MethylAI Configuration Description
+
+The configuration dictionary (`methylai_config_dict`) controls all aspects of model architecture, training, and data handling. Below is a detailed description of each parameter, grouped by function.
+
+### Trainer Parameters
+
+| Parameter                            | Default    | Description                                                                                                                                                                                                                                                                                                    |
+|--------------------------------------|------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| total_epoch_number                   | 3          | Total number of training epochs. Recommended: 3 for fine‑tuning, 5 for training from scratch.                                                                                                                                                                                                                  |
+| max_step_per_epoch                   | 10_000_000 | Maximum number of steps per epoch. Set to a large value (e.g., 10_000_000) to disable early stopping within an epoch.                                                                                                                                                                                          |
+| learning_rate                        | 0.0001     | Learning rate for all parts of MethylAI except the output block. Recommended: 0.0001 for fine‑tuning, 0.0006 for training from scratch.                                                                                                                                                                        |
+| output_block_learning_rate           | 0.0006     | Learning rate for the output block. Recommended: 0.0006.                                                                                                                                                                                                                                                       |
+| weight_decay                         | 0.01       | Weight decay (L2 regularization) coefficient.                                                                                                                                                                                                                                                                  |
+| batch_size                           | 50         | Batch size. Set to 50 for an RTX 4090 (24 GB); scale proportionally for GPUs with more memory.                                                                                                                                                                                                                 |
+| output_folder                        | –          | Absolute path to the directory where all training outputs (checkpoints, logs, etc.) are saved.                                                                                                                                                                                                                 |
+| output_result_file                   | –          | Filename (within output_folder) that records per‑epoch training and validation metrics.                                                                                                                                                                                                                        |
+| pretrain_snapshot_path               | –          | Absolute path to the pre‑trained checkpoint file (e.g., MethylAI_pretrain_12_species.pth).                                                                                                                                                                                                                     |
+| is_load_output_block_pretrain_weight | False      | Whether to load pre‑trained weights for the output block. Set to True only when pre‑training and fine‑tuning use the same dataset; in that case, also set output_block_learning_rate to 0.0001.                                                                                                                |
+| snapshot_path                        | None       | Absolute path to a checkpoint from which to resume training (e.g., after an interruption). Note: If both pretrain_snapshot_path and snapshot_path are set, only snapshot_path takes effect. snapshot_path also restores optimizer and scheduler states, while pretrain_snapshot_path loads only model weights. |
+| is_run_validation_at_first           | False      | Whether to run validation before the first training epoch (useful for debugging).                                                                                                                                                                                                                              |
+
+### Model Architecture Parameters
+
+| Parameter                          | Default                        | Description                                                                                                                                                                                                                                                                                                                                                                                  |
+|------------------------------------|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| input_block_channel                | [20, 190, 30]                  | Number of channels allocated to each kernel size in the first multi‑scale convolutional layer.                                                                                                                                                                                                                                                                                               |
+| input_block_kernel_size            | [3, 9, 21]                     | Kernel sizes in the first multi‑scale convolutional layer. Must have the same length as input_block_channel. The i‑th element of input_block_channel corresponds to the i‑th kernel size (e.g., 20 channels for kernel size 3).                                                                                                                                                              |
+| input_block_additional_conv_layer  | (9, 9)                         | Kernel sizes of additional convolutional layers after the multi‑scale layer. (9, 9) adds two convolutional layers with kernel size 9, each followed by batch normalization and GELU activation.                                                                                                                                                                                              |
+| input_block_exponential_activation | True                           | Whether to use exponential activation after the first multi‑scale convolutional layer. If False, GELU is used instead.                                                                                                                                                                                                                                                                       |
+| width                              | [300, 360, 420, 480, 540, 600] | Channel counts for each multi‑scale CNN block.                                                                                                                                                                                                                                                                                                                                               |
+| depth                              | [2, 2, 2, 2, 2, 2]             | Number of repeated convolutional layers in each multi‑scale CNN block.                                                                                                                                                                                                                                                                                                                       |
+| kernel_size                        | [9, 9, 9, 9, 9, 9]             | Kernel sizes for each multi‑scale CNN block.                                                                                                                                                                                                                                                                                                                                                 |
+| stride                             | [4, 4, 4, 4, 4, 2]             | Stride for each multi‑scale CNN block. The total input DNA length is the product of all strides multiplied by the last kernel size (e.g., 4×4×4×4×4×2×9 = 9×2¹¹ = 18,432).                                                                                                                                                                                                                   |
+| output_block_dims                  | (4 * 80, 4 * 5)                | Dimensions of the output block. Each tuple element specifies the number of neurons in a hidden layer; the last element is the output layer size. Additional hidden layers can be added by extending the tuple (e.g., (4×80, 4×40, 4×5)). The default (320, 20) corresponds to a hidden layer of 320 neurons and an output layer of 20 neurons (4 samples × 5 methylation levels per sample). |
+
+### Dataset & DataLoader Parameters
+
+| Parameter                          | Default | Description                                                                                                                                                                                                                                                     |
+|------------------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| input_dna_length                   | 18,432  | Length of the DNA sequence input to MethylAI (must match the product of strides and the last kernel size).                                                                                                                                                      |
+| train_num_workers                  | 2       | Number of workers for the training DataLoader. Recommended: 2.                                                                                                                                                                                                  |
+| validation_num_workers             | 4       | Number of workers for the validation DataLoader. Recommended: 4.                                                                                                                                                                                                |
+| loss_weight_factor                 | 5       | Factor used to scale loss weights based on CpG coverage.                                                                                                                                                                                                        |
+| max_loss_weight_factor             | 1.0     | Maximum allowed loss weight.                                                                                                                                                                                                                                    |
+| minimal_coverage                   | 5       | Minimum coverage required for a CpG site to contribute to the loss. Sites with coverage below this threshold receive a loss weight of 0. With the default settings, loss weights are binary: 0 for coverage <5, 1 otherwise.                                    |
+| is_keep_raw_methylation            | True    | Whether to use raw methylation levels during training (mainly for experimental purposes).                                                                                                                                                                       |
+| is_reverse_complement_augmentation | True    | Whether to use reverse‑complement sequences for data augmentation. When True, the training set is doubled by adding the reverse‑complement of every CpG sequence. During validation, predictions for the forward and reverse‑complement sequences are averaged. |
+
+### Learning Rate Scheduler Parameters
+
+| Parameter                | Default | Description                                                                                                                                                                              |
+|--------------------------|---------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| warmup_lr_epoch_number   | 1       | Number of epochs for linear learning‑rate warm‑up. Values can be floats (e.g., 0.5 for half an epoch).                                                                                   |
+| constant_lr_epoch_number | 1       | Number of epochs with a constant learning rate after warm‑up. After these epochs, the CosineAnnealingWarmRestarts scheduler is used. Values can be floats (e.g., 0.5 for half an epoch). |
+
+### Training/Validation Set Paths
+
+| Parameter                    | Default | Description                                                                                                                                                                                                                                                             |
+|------------------------------|---------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| train_set_file               | –       | Absolute path to the training set file (e.g., encode_train_set.pkl).                                                                                                                                                                                                    |
+| validation_set_file          | –       | Absolute path to the validation set file (e.g., encode_validation_set.pkl).                                                                                                                                                                                             |
+| genome_fasta_file            | –       | Absolute path to the reference genome FASTA file (e.g., hg38.fa).                                                                                                                                                                                                       |
+| cpg_index_to_repetition_dict | {}      | If provided, enables oversampling of hard‑to‑learn CpG sites (e.g., cell‑type‑specific sites). The dictionary maps {path_to_cpg_file: repetition_count}. Multiple entries are allowed. Code for generating the oversampling files will be provided in a future release. |
 
 ## Reference
 This project utilizes and/or references the following libraries and packages:
