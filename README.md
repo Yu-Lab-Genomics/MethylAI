@@ -683,7 +683,7 @@ The following files will be generated in the specified `--output_folder`:
 `--bedtools_path`: Path to the bedtools executable. Required to generate the `inactive_motif.bed` file.
 
 ### Note
-Currently, we provide a complete workflow for analyzing active TF motif sites within hypomethylated regions. This pipeline has been extensively validated in our research, ensuring its robustness and reliability. Several identified active motifs and their corresponding TFs have been experimentally confirmed to regulate DNA methylation in hypomethylated regions (see our MethylAI bioRxiv preprint in the **Citation** section).
+In this tutorial, we provide a complete workflow for analyzing active TF motif sites within hypomethylated regions. This pipeline has been extensively validated in our research, ensuring its robustness and reliability. Several identified active motifs and their corresponding TFs have been experimentally confirmed to regulate DNA methylation in hypomethylated regions (see our MethylAI bioRxiv preprint in the **Citation** section).
 
 We plan to extend this framework in future releases to include:
 - Analysis of hypermethylated regions
@@ -713,10 +713,11 @@ gunzip data/variant/00-common_all.vcf.gz
 gunzip data/genome/cpg_coordinate_hg38.chr1-22.sort.bed.gz
 
 # Add 'chr' prefix to chromosome column in the VCF (to match BED format)
-awk 'BEGIN{OFS="\t"} {if($0 !~ /^#/) $1="chr"$1; print}' data/variant/00-common_all.vcf > data/variant/00-common_all_withchr.vcf
+awk 'BEGIN{OFS="\t"} {if($0 !~ /^#/) $1="chr"$1; print}' data/variant/00-common_all.vcf \
+> data/variant/00-common_all_withchr.vcf
 ```
 
-### 2. 产生variant dataset文件
+### 2. Generate Variant Dataset
 This step identifies variants overlapping active motif sites (obtained in Downstream Analysis Tutorial 1) and extracts nearby CpG sites to create a dataset for variant effect prediction.
 
 #### 2.1 Intersect Variants with Active Motif Sites
@@ -755,10 +756,10 @@ mkdir -p data/variant_dataset
 
 python src/analysis_variant/get_variant_cpg_dataset.py \
 --input_variant_cpg_file data/variant/00-common_all_intersect_smooth_1_active_motif_1k_cpg.txt \
---output_variant_cpg_dataset_file data/variant_dataset/00-common_all_intersect_active_motif_1k_cpg_dataset.txt
+--output_variant_cpg_dataset_file data/variant_dataset/00-common_all_intersect_smooth_1_active_motif_1k_cpg_dataset.txt
 ```
 **Expected Output:**  
-`data/variant_dataset/00-common_all_intersect_active_motif_1k_cpg_dataset.txt`
+`data/variant_dataset/00-common_all_intersect_smooth_1_active_motif_1k_cpg_dataset.txt`
 
 - Format: Tab‑separated values with header
 - Purpose: Processed dataset ready for variant effect calculation in the next step
@@ -779,7 +780,7 @@ nohup python -u src/analysis_variant/get_variant_effect.py \
 --dataset_info_file data/encode_dataset/encode_dataset_info.txt \
 --config_file configs/finetune_tutorial_encode.py \
 --config_dict_name methylai_config_dict \
---model_ckpt result/finetune_tutorial_encode/snapshot/snapshot_epoch_2.pth \
+--model_ckpt result/finetune_tutorial_encode/checkpoint/checkpoint_epoch_2.pth \
 --gpu_id 0 \
 --batch_size 100 \
 --num_workers 8 \
@@ -801,7 +802,7 @@ chr, POS, RSID, REF, ALT, ALT_split, variant_start, variant_ref_len, variant_alt
   - Final column: `cg_change` (binary flag, 0 or 1) indicates whether the variant disrupts a canonical CpG dinucleotide sequence (1 = disrupted). Note: Rows with `cg_change = 1` should be filtered out in downstream analyses.
 
 **Arguments (required)**  
-`--variant_dataset_file`: Path to the variant dataset file generated in the previous step (`00-common_all_intersect_active_motif_1k_cpg_dataset.txt`).  
+`--variant_dataset_file`: Path to the variant dataset file generated in the previous step (`00-common_all_intersect_smooth_1_active_motif_1k_cpg_dataset.txt`).  
 `--dataset_info_file`: Path to the dataset information file (e.g., `encode_dataset_info.txt` from Fine‑tuning Tutorial 1).  
 `--config_file`: MethylAI configuration file (Python script). Note: This analysis also uses the genome_fasta_file path specified in the config.  
 `--config_dict_name`: Name of the Python dictionary variable in the config file that holds the configuration.  
@@ -814,11 +815,11 @@ chr, POS, RSID, REF, ALT, ALT_split, variant_start, variant_ref_len, variant_alt
 `--output_prefix`: Prefix for output filenames.
 
 **Arguments (optional)**  
-`--print_per_step`: Print progress every N steps. Default: 500
-`--reverse_complement_augmentation`: Enable reverse complement data augmentation during inference. Default: not set
+`--print_per_step`: Print progress every N steps. Default: 500  
+`--reverse_complement_augmentation`: Enable reverse complement data augmentation during inference.
 
+### 4. Analyze Variant Effects
 
-### 4. 分析variants结果
 This step filters for variants that are predicted to increase DNA methylation in hypomethylated regions and associates them with overlapping motif information.
 
 ```bash
@@ -828,6 +829,7 @@ python -u src/analysis_variant/analyze_variant_effect.py --variant_effect_file r
 --output_prefix 00-common_all_intersect_smooth_1_active_motif \
 > result/finetune_tutorial_encode/variant_analysis/analyze_variant_effect.log 2>&1 &
 ```
+
 **Note**: Variants that disrupt CpG dinucleotides (i.e., rows with cg_change = 1) are automatically filtered out in this step, as the focus is on non‑CpG‑altering variants that may modulate methylation levels.
 
 **Expected Output:**  
@@ -846,13 +848,28 @@ For each variant, the CpG site with the largest absolute effect size is retained
 **Arguments (required)**  
 `--variant_effect_file`: Path to the variant effect file (`00-common_all_intersect_smooth_1_active_motif_variant_prediction_dataframe.txt`) generated in the previous step.  
 `--variant_active_motif_detail_file`: Path to the variant‑motif overlap detail file (`00-common_all_intersect_smooth_1_active_motif_detail.txt`) generated in Step 2.1.  
-`--dataset_index`: Index of the sample to analyze (must match the dataset index used for active motif identification).
-`--output_folder`: Directory to store output files.
-`--output_prefix`: Prefix for output filenames.
+`--dataset_index`: Index of the sample to analyze (must match the dataset index used for active motif identification).  
+`--output_folder`: Directory to store output files.  
+`--output_prefix`: Prefix for output filenames.  
 
 **Arguments (optional)**  
---methylation_type: Type of methylation region to analyze: `low` (hypomethylated) or `high` (hypermethylated). Default: `low`  
---threshold_min_variant_effect: Minimum predicted variant effect threshold. Use **positive** values for hypomethylation analysis (to select variants that increase methylation) and **negative** values for hypermethylation analysis. Default: 0.01
+`--methylation_type`: Type of methylation region to analyze: `low` (hypomethylated) or `high` (hypermethylated). Default: `low`  
+`--threshold_min_variant_effect`: Minimum predicted variant effect threshold. Use **positive** values for hypomethylation analysis (to select variants that increase methylation) and **negative** values for hypermethylation analysis. Default: 0.01
+
+### Note
+
+This tutorial provides a workflow for analyzing variants that intersect active motif sites within hypomethylated regions.
+
+If you wish to analyze **all variants** (without filtering for active motif overlap), you can skip step 2.1 (variant‑motif intersection) and use the original VCF file (00-common_all_withchr.vcf) directly in step 2.2. In this case, you should adjust the --threshold_min_variant_effect in step 4 to a more stringent value to maintain reliability. We recommend:
+
+- Hypomethylation analysis: `--threshold_min_variant_effect 0.1` 
+- Hypermethylation analysis: `--threshold_min_variant_effect -0.1`
+
+Skipping step 2.1 means that the motif association step (in step 4) will not be performed, and the output will lack motif‑related columns (`motif_start`, `motif_end`, `motif_id_name`). To disable motif association in step 4, set the argument --variant_active_motif_detail_file to an empty string (`""`).
+
+We plan to extend this framework in future releases to include:
+- Analysis of variants in hypermethylated regions
+- More flexible variant‑effect analysis pipelines for broader genomic contexts
 
 ## Configuration Dictionary
 
@@ -861,6 +878,7 @@ This project utilizes and/or references the following libraries and packages:
 - R package bsseq: https://bioconductor.org/packages/release/bioc/html/bsseq.html
 - Captum (implementation of DeepSHAP): https://captum.ai/
 - wgbstools: https://github.com/nloyfer/wgbs_tools
+- bedtools: https://github.com/arq5x/bedtools2
 
 ## Citation
 If you use MethylAI in your research, please cite our preprint/publication:  
