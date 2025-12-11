@@ -11,7 +11,7 @@ def main_argparse():
     parser.add_argument('--motif_statistic_file', required=True, help='')
     parser.add_argument('--captum_cpg_file', required=True, help='')
     parser.add_argument('--evaluation_file', required=True, help='')
-    parser.add_argument('--dataset_index', required=True, help='')
+    parser.add_argument('--dataset_index', required=True, type=int, help='')
     parser.add_argument('--output_folder', required=True, help='')
     parser.add_argument('--output_prefix', required=True, help='')
     # optional parameter

@@ -1,11 +1,10 @@
 import polars as pl
 import numpy as np
 import datetime
-import re
 import os
 import subprocess
 from typing import Sequence
-from MethylAI.src.utils.utils import check_output_folder, debug_methods
+from MethylAI.src.utils.utils import check_output_folder
 
 
 class CaptumResult:
@@ -342,7 +341,7 @@ class MotifAnalysis:
                 'motif_attribution_mean', 'motif_attribution_abs_mean', 'motif_activation_score'
             ]]
 
-    def generate_active_motif_pldf(self, is_low_methylation: bool, threshold_motif_attribution_mean,):
+    def generate_active_motif_pldf(self, is_low_methylation: bool, threshold_motif_attribution_mean: float):
         assert (threshold_motif_attribution_mean < 0 if is_low_methylation
                 else threshold_motif_attribution_mean > 0)
         # if-else筛选active motif

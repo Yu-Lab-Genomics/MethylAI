@@ -3,7 +3,6 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import pandas as pd
 import numpy as np
-import gc
 import datetime
 from MethylAI.src.dataset.validation_dataset import MethylAIValidationDataset
 from MethylAI.src.utils.utils import check_output_folder, debug_methods
@@ -118,7 +117,6 @@ class InferenceTools:
         # 运行结束，把模型移除
         self.model.to('cpu')
         torch.cuda.empty_cache()
-        gc.collect()
 
     def generate_prediction_df(self):
         # 产生self.prediction_df
