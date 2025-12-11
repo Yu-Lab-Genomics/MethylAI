@@ -187,6 +187,19 @@ When `--output_bedgraph` is specified:
 
 **⚠️ Technical Note**: The MethylAI model is designed to predict both site-specific and regional methylation levels. Consequently, the program does not validate whether input coordinates correspond to canonical CpG dinucleotides. We caution that prediction accuracy for non-CpG sites has not been systematically evaluated and may not reflect biological reality.
 
+### Note
+
+MethylAI was pre-trained and fine-tuned using human chr1–9 and chr12–22 for training, chr10 for validation, and chr11 for testing (all coordinates are based on the human hg38 genome assembly). If you wish to use MethylAI as a baseline model in your research, you can quickly evaluate its prediction accuracy on ENCODE or human cell‑type datasets by following these steps:
+
+1. Replace the demo CpG coordinate file  
+Substitute demo/demo_data/cpg_coordinate.txt with the coordinates of chromosome 11 CpG sites (hg38, see **Preparation** Section).
+2. Configure the model parameters  
+Ensure that the --config_file, --config_dict_name, and --model_ckpt arguments point to the appropriate configuration and checkpoint files for the model you want to evaluate (e.g., the fine‑tuned model on ENCODE dataset of human cell type dataset, see **Preparation** Section).
+3. Run the demo script  
+Execute demo/demo.py as described in the Demo section. The output will provide MethylAI’s predicted methylation levels for the chromosome 11 test set.
+4. Fine‑tune on your own data (optional)  
+To adapt MethylAI to your own dataset, follow the Fine‑tuning Tutorial 1 and 2 to fine‑tune a model that can serve as a baseline for your specific biological context.
+
 ---
 
 ## Fine-tuning Tutorial 1: Using a ENCODE Dataset
@@ -297,7 +310,7 @@ Upon successful execution, the following files will be generated in the specifie
 `--threshold_max_missing_cpg_ratio`: Sample QC threshold; samples with low-quality CpG ratio exceeding this value are excluded (default: `0.5`). **Do not modify for tutorial or reproducibility**.  
 `--threshold_max_n_base_ratio`: CpG site QC threshold; sites with N-base ratio above this value in the extracted sequence are excluded (default: `0.02`). **Do not modify for tutorial or reproducibility**.  
 `--threshold_max_missing_sample_ratio`: CpG site QC threshold; sites with low-quality calls across samples exceeding this ratio are excluded (default: `0.5`). **Do not modify for tutorial or reproducibility**.  
-`--calculate_regional_methylation`: Window sizes (in bp) for regional methylation calculation (default: `1000 500 200`). Set `--calculate_regional_methylation 0` to disable this calculation. **Note: Computing regional methylation for all ~27 million CpG sites requires approximately 24 hours. Do not modify for tutorial or reproducibility**.  
+`--calculate_regional_methylation`: Window sizes (in bp) for regional methylation calculation (default: `1000 500 200`). Set `--calculate_regional_methylation 0` to disable this calculation. Note: Computing regional methylation for all ~27 million CpG sites requires approximately 24 hours. **Do not modify for tutorial or reproducibility**.  
 `--quiet`: Suppress runtime messages when set.  
 `--output_format`: Dataset output format; options: pickle or feather (default: `pickle`). **Do not modify for tutorial or reproducibility**.  
 `--output_sampled_training_set`: Generates randomly sampled training subsets for rapid experimentation. Accepts one or more floating-point values between 0 and 1 (e.g., `0.1 0.2 0.5`) representing the sampling proportions relative to the full training set. This feature is disabled by default. **Do not set for full reproducibility**.  
@@ -432,6 +445,7 @@ src/script/finetune.py \
 --print_model_output_step 5000 \
 >> result/finetune_tutorial_bismark.log 2>&1 &
 ```
+
 ---
 
 ## Downstream Analysis Tutorial 1: Identification of DNA Methylation Linked Active TF Motif Sites
