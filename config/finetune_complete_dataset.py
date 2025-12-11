@@ -1,16 +1,20 @@
+pretrain_checkpoint_folder = ''
+dataset_folder = ''
+output_folder = ''
+
 methylai_config_dict = {
     # trainer设置
     'total_epoch_number': 3,
-    'max_step_per_epoch': 100_0000,
+    'max_step_per_epoch': 10_000_000,
     'learning_rate': 0.0001,
     'output_block_learning_rate': 0.0005,
     'weight_decay': 0.01,
     'batch_size': 50,
-    'pretrain_checkpoint_path': None,
+    'output_folder': output_folder,
+    'pretrain_checkpoint_path': f'{pretrain_checkpoint_folder}/checkpoint/checkpoint_epoch_1.pth',
     'is_load_output_block_pretrain_weight': True,
     'checkpoint_path': None,
     'is_run_validation_at_first': False,
-    'output_folder': '4_finetune_human1681',
     # model hyper parameter
     'input_block_channel': [20, 190, 30],
     'input_block_kernel_size': [3, 9, 21],
@@ -34,21 +38,14 @@ methylai_config_dict = {
     'warmup_lr_epoch_number': 1,
     'constant_lr_epoch_number': 1,
     # dataset file path
-    'train_set_file': '/home/chenfaming/pool1/project/231009_DNA_methylation_data/241211_human_data/11_human1682_dataset/'
-                      'human1681_smooth_raw_window3_train_chromosome',
+    'train_set_file': f'{dataset_folder}/human1681_smooth_raw_window3_train_chromosome',
     'bed_dataset_to_repetition_dict': {
-        '/home/chenfaming/pool1/project/231009_DNA_methylation_data/241211_human_data/11_human1682_dataset/'
-        'human1681_smooth_raw_window3_train_chromosome_coordinate.inter_CTS_unme_extend500.uniq.bed': 1,
-        '/home/chenfaming/pool1/project/231009_DNA_methylation_data/241211_human_data/11_human1682_dataset/'
-        'human1681_smooth_raw_window3_train_chromosome_coordinate.inter_CTS_unme_extend250.uniq.bed': 2,
-        '/home/chenfaming/pool1/project/231009_DNA_methylation_data/241211_human_data/11_human1682_dataset/'
-        'human1681_smooth_raw_window3_train_chromosome_coordinate.inter_CTS_unme_extend100.uniq.bed': 2,
-        '/home/chenfaming/pool1/project/231009_DNA_methylation_data/241211_human_data/11_human1682_dataset/'
-        'human1681_smooth_raw_window3_train_chromosome_coordinate.inter_CTS_unme.uniq.bed': 2,
-        '/home/chenfaming/pool1/project/231009_DNA_methylation_data/241211_human_data/11_human1682_dataset/'
-        'human1681_smooth_raw_window3_train_chromosome_coordinate.inter_CTS_unme_train_repetition.bed': 2,
+        f'{dataset_folder}human1681_smooth_raw_window3_train_chromosome_coordinate.inter_CTS_unme_extend500.uniq.bed': 1,
+        f'{dataset_folder}human1681_smooth_raw_window3_train_chromosome_coordinate.inter_CTS_unme_extend250.uniq.bed': 2,
+        f'{dataset_folder}human1681_smooth_raw_window3_train_chromosome_coordinate.inter_CTS_unme_extend100.uniq.bed': 2,
+        f'{dataset_folder}human1681_smooth_raw_window3_train_chromosome_coordinate.inter_CTS_unme.uniq.bed': 2,
+        f'{dataset_folder}human1681_smooth_raw_window3_train_chromosome_coordinate.inter_CTS_unme_train_repetition.bed': 2,
     },
-    'validation_set_file': '/home/chenfaming/pool1/project/231009_DNA_methylation_data/241211_human_data/11_human1682_dataset/'
-                           'human1681_smooth_raw_window3_validation_chromosome.pkl',
-    'genome_fasta_file': '/home/chenfaming/genome/ucsc_hg38/hg38.fa',
+    'validation_set_file': f'{dataset_folder}/human1681_smooth_raw_window3_validation_chromosome.pkl',
+    'genome_fasta_file': f'{dataset_folder}/genome/ucsc_hg38/hg38.fa',
 }

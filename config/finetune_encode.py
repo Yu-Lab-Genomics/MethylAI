@@ -1,4 +1,5 @@
-checkpoint_folder = ''
+pretrain_checkpoint_folder = ''
+dataset_folder = ''
 output_folder = ''
 
 methylai_config_dict = {
@@ -8,9 +9,9 @@ methylai_config_dict = {
     'learning_rate': 0.0001,
     'output_block_learning_rate': 0.0006,
     'weight_decay': 0.01,
-    'batch_size': 150,
+    'batch_size': 50,
     'output_folder': output_folder,
-    'pretrain_checkpoint_path': f'{checkpoint_folder}/checkpoint/checkpoint_epoch_1.pth',
+    'pretrain_checkpoint_path': f'{pretrain_checkpoint_folder}/checkpoint/checkpoint_epoch_1.pth',
     'is_load_output_block_pretrain_weight': False,
     'checkpoint_path': None,
     'is_run_validation_at_first': False,
@@ -37,14 +38,11 @@ methylai_config_dict = {
     'warmup_lr_epoch_number': 1,
     'constant_lr_epoch_number': 1,
     # train/validation set
-    'train_set_file': '/home/chenfaming/pool2/project/231009_DNA_methylation_data/241211_human_data/17_human_ENCODE_dataset/2_dataset_file/'
-                      'human_encode_smooth_raw_window3_train_chromosome.pkl',
+    'train_set_file': f'{dataset_folder}/human_encode_smooth_raw_window3_train_chromosome.pkl',
     'bed_dataset_to_repetition_dict': {
-        '/home/chenfaming/pool2/project/231009_DNA_methylation_data/241211_human_data/17_human_ENCODE_dataset/2_dataset_file/'
-        'human_encode_smooth_raw_window3_train_chromosome_coordinate.inter_CGI_2.bed': 2,
+        f'{dataset_folder}/human_encode_smooth_raw_window3_train_chromosome_coordinate.inter_CGI_2.bed': 2,
     },
-    'validation_set_file': '/home/chenfaming/pool2/project/231009_DNA_methylation_data/241211_human_data/17_human_ENCODE_dataset/2_dataset_file/'
-                           'human_encode_smooth_raw_window3_validation_chromosome.pkl',
-    'genome_fasta_file': '/home/chenfaming/genome/ucsc_hg38/hg38.fa',
+    'validation_set_file': f'{dataset_folder}/human_encode_smooth_raw_window3_validation_chromosome.pkl',
+    'genome_fasta_file': f'{dataset_folder}/genome/ucsc_hg38/hg38.fa',
 }
 

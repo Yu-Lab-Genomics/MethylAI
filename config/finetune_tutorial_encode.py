@@ -5,7 +5,7 @@ methylai_config_dict = {
     'learning_rate': 0.0001,
     'output_block_learning_rate': 0.0006,
     'weight_decay': 0.01,
-    'batch_size': 200,
+    'batch_size': 50,
     'output_folder': '/home/chenfaming/tmp_pool2/project/240507_DNA_methylation_model_result/251125_github_test/result/finetune_tutorial_encode',
     'output_result_file': 'finetune_tutorial_encode_result.txt',
     'pretrain_snapshot_path': '/home/chenfaming/code/DNA_methylation_model_H800_2/MethylAI/checkpoint/MethylAI_pretrain_12_species.pth',
