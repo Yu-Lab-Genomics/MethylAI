@@ -231,6 +231,7 @@ Rscript src/script/bsmooth.R \
   35 \
   500
 ```
+
 **Arguments (positional)**  
 `1`: Directory containing preprocessed ENCODE files (output from previous step)  
 `2`: Suffix pattern to identify preprocessed files (default: .preprocessed.txt)  
@@ -242,6 +243,7 @@ Rscript src/script/bsmooth.R \
 
 #### 2.3. Generate train/validation/test dataset files
 ```bash
+
 python src/preprocess/generate_dataset.py \
 --smooth_methylation_file data/encode_preprocess/smoothed_methylation_data.txt.gz \
 --data_info_filedata/encode_preprocess/smoothed_methylation_info.txt \
@@ -250,6 +252,7 @@ python src/preprocess/generate_dataset.py \
 --output_folder data/encode_dataset \
 --output_prefix encode
 ```
+
 **Expected output:**  
 Upon successful execution, the following files will be generated in the specified output folder (`data/encode_dataset` in this example):
 
@@ -343,6 +346,7 @@ src/script/finetune.py \
 --print_model_output_step 5000 \
 >> result/finetune_tutorial_encode.log 2>&1 &
 ```
+
 **Environment Setting:**  
 `CUDA_VISIBLE_DEVICES`: Specifies the GPU devices available for the job (default: 0‑3). Adjust this variable to match your hardware configuration.  
 `OMP_NUM_THREADS`: Sets the number of OpenMP threads for CPU‑parallel operations (default: 4). Modify based on your CPU core count.
@@ -366,6 +370,7 @@ Upon successful fine-tuning, the following files will be generated in the direct
 File: `{output_result_file}` (as defined in the configuration)  
 Format: Tab-separated values  
 Contents: Per‑epoch training and validation metrics, including:
+
 - Training loss
 - Validation loss
 - Pearson correlation coefficient (PCC) on the validation set
@@ -430,11 +435,15 @@ src/script/finetune.py \
 ---
 
 ## Downstream Analysis Tutorial 1: Identification of DNA Methylation Linked Active TF Motif Sites
+
 **Prerequisite**: Ensure you have completed Fine-tuning Tutorial 1 to generate the required dataset and fine-tuned model.
 
 ### 1. Preparation
+
 Download the JASPAR Transcription Factor Binding Sites track from the UCSC Genome Browser and filter for high-confidence motif sites (match score > 400).  
+
 **Note**: This step requires approximately 1 TB of free disk space.
+
 ```bash
 # Download the JASPAR2024 track in bigBed format
 wget -c -P data/genome https://hgdownload.soe.ucsc.edu/gbdb/hg38/jaspar/JASPAR2024.bb
@@ -447,6 +456,7 @@ awk -F'\t' '$5 > 400' data/genome/JASPAR2024.bed > data/genome/JASPAR2024_400.be
 ```
 
 ### 2. Selection of Representative CpG Sites
+
 This step selects representative CpG sites from hypomethylated regions for subsequent attribution score analysis.
 
 ```bash
@@ -456,6 +466,7 @@ python -u src/analysis_motif/get_low_me_region_representative_cpg.py \
 --output_folder data/encode_motif \
 --output_prefix encode
 ```
+
 **Expected Output**:
 
 The following files will be generated in the specified `--output_folder`:
@@ -498,7 +509,8 @@ nohup python -u src/analysis_motif/get_sequence_attribution.py \
 --gpu_id 0 \
 --sample_name col_1 \
 --model_output_index 0 \
---n_permutation 80 --output_folder result/finetune_tutorial_encode/motif_analysis \
+--n_permutation 40 \
+--output_folder result/finetune_tutorial_encode/motif_analysis \
 > result/finetune_tutorial_encode/motif_analysis/get_sequence_attribution_smooth_1.log 2>&1 &
 ```
 
@@ -518,9 +530,11 @@ nohup python -u src/analysis_motif/get_sequence_attribution.py \
 --gpu_id 0 \
 --sample_name smooth_1 \
 --model_output_index 0 \
---n_permutation 80 --output_folder result/finetune_tutorial_encode/motif_analysis \
+--n_permutation 40 \
+--output_folder result/finetune_tutorial_encode/motif_analysis \
 > result/finetune_tutorial_encode/motif_analysis/get_sequence_attribution_smooth_1.log 2>&1 &
 ```
+
 **Expected Output**:  
 The script creates a folder named `{sample_name}_index_{model_output_index}` within the specified `--output_folder`. This folder contains:  
 1. `representative_cpg_dataframe.txt`: Records the order of CpG sites processed for attribution scores.
@@ -549,6 +563,7 @@ Contains per‑sequence attribution scores in bedGraph format. Files are named a
 `--output_bedgraph`: If set, output attribution scores in bedGraph format for visualization.
 
 ### 4. Prediction Accuracy Evaluation of Representative CpG Sites
+
 This step evaluates the prediction accuracy of MethylAI for the representative CpG sites. The evaluation is necessary because the calculation of sequence attribution scores using DeepSHAP assumes that MethylAI's predictions are accurate.
 
 ```bash
@@ -566,6 +581,7 @@ nohup python -u src/analysis_motif/evaluate_representative_cpg.py \
 --output_prefix encode \
 --reverse_complement_augmentation
 ```
+
 **Expected Output**  
 **File**: `encode_smooth_1_evaluation_dataframe.txt`  
 **Format**: Tab‑separated values with header  
@@ -602,6 +618,7 @@ nohup python -u src/analysis_motif/get_motif_statistic.py \
 --output_prefix encode_smooth_1 \
 > result/finetune_tutorial_encode/motif_analysis/get_motif_statistic_smooth_1.log 2>&1 &
 ```
+
 **Expected Output**  
 **File**: `encode_smooth_1_motif_statistic_dataframe.txt`  
 **Format**: Tab‑separated values with header  
@@ -635,18 +652,20 @@ nohup python -u src/analysis_motif/get_motif_statistic.py \
 `--dna_attribution_file`: Specify a different file for DNA attribution scores (if changed from default). Default: `numpy/dna_attribution.npy` (in sequence_attribution_folder)	
 
 ### 6. Identification of Active Motif Sites
+
 This step filters for active motif sites based on a set of thresholds to identify transcription factor binding motifs that exhibit significant attribution scores within hypomethylated regions.
 
 ```bash
 python -u src/analysis_motif/get_active_motif.py \
 --motif_statistic_file result/finetune_tutorial_encode/motif_analysis/smooth_1_index_0/motif_statistic/encode_smooth_1_motif_statistic_dataframe.txt \
 --captum_cpg_file result/finetune_tutorial_encode/motif_analysis/smooth_1_index_0/captum_cpg_dataframe.txt \
---evaluation_file result/finetune_tutorial_encode/motif_analysis/encode_col_1_prediction_dataframe.txt \
+--evaluation_file result/finetune_tutorial_encode/motif_analysis/encode_col_1_evaluation_dataframe.txt \
 --dataset_index 1 \
 --output_folder result/finetune_tutorial_encode/motif_analysis/smooth_1_index_0/active_motif \
 --output_prefix smooth_1 \
 --bedtools_path `which bedtools` > result/finetune_tutorial_encode/motif_analysis/get_active_motif.log 2>&1 &
 ```
+
 **Expected Output**  
 
 The following files will be generated in the specified `--output_folder`:  
@@ -670,7 +689,7 @@ The following files will be generated in the specified `--output_folder`:
 **Arguments (required)**  
 `--motif_statistic_file`: Path to the motif statistics file (`motif_statistic_dataframe.txt`) from Step 5.  
 `--captum_cpg_file`: Path to the representative CpG file (`representative_cpg_dataframe.txt`) from Step 3.  
-`--evaluation_file`: Path to the prediction accuracy file (`prediction_dataframe.txt`) from Step 4.  
+`--evaluation_file`: Path to the prediction accuracy file (`evaluation_dataframe.txt`) from Step 4.  
 `--dataset_index`: Sample index (must match the index used in Step 2).
 `--output_folder`: Directory to store output files.  
 `--output_prefix`: Prefix for output filenames.  
@@ -693,7 +712,7 @@ We plan to extend this framework in future releases to include:
 ## Downstream Analysis Tutorial 2: Interpreting GWAS Variants
 **Prerequisite:** Complete [Fine‑tuning Tutorial 1](#fine-tune-the-model) to generate the required dataset and fine‑tuned model, and [Downstream Analysis Tutorial 1](#downstream-analysis-1-identification-of-dna-methylation-linked-active-tf-motif-sites) to obtain active motif sites.
 
-**Rationale:** Variants that intersect with active motif sites are more readily interpretable (e.g., a variant may affect DNA methylation by altering a transcription factor binding site). Furthermore, our mQTL validation shows that MethylAI achieves >87% accuracy in predicting the direction of methylation changes for variants located within active motif sites (see the MethylAI bioRxiv preprint in the **Citation** section).
+**Rationale:** Variants that intersect with active motif sites are more biological interpretable (e.g., a variant may affect DNA methylation by altering a transcription factor binding site). Furthermore, our mQTL validation shows that MethylAI achieves >87% accuracy in predicting the direction of methylation changes for variants located within active motif sites (see the MethylAI bioRxiv preprint in the **Citation** section).
 
 This tutorial guides you through identifying variants that lie within active motif sites of hypomethylated regions and using MethylAI to screen for variants predicted to increase DNA methylation in these regions.
 
@@ -718,10 +737,13 @@ awk 'BEGIN{OFS="\t"} {if($0 !~ /^#/) $1="chr"$1; print}' data/variant/00-common_
 ```
 
 ### 2. Generate Variant Dataset
+
 This step identifies variants overlapping active motif sites (obtained in Downstream Analysis Tutorial 1) and extracts nearby CpG sites to create a dataset for variant effect prediction.
 
 #### 2.1 Intersect Variants with Active Motif Sites
-Use `bedtools intersect` to select common variants that overlap active motif sites:
+
+Use `bedtools intersect` to select variants that overlap active motif sites:
+
 ```bash
 # Extract variants overlapping active motif sites (unique records)
 bedtools intersect -a data/variant/00-common_all.vcf \
@@ -758,18 +780,20 @@ python src/analysis_variant/get_variant_cpg_dataset.py \
 --input_variant_cpg_file data/variant/00-common_all_intersect_smooth_1_active_motif_1k_cpg.txt \
 --output_variant_cpg_dataset_file data/variant_dataset/00-common_all_intersect_smooth_1_active_motif_1k_cpg_dataset.txt
 ```
+
 **Expected Output:**  
 `data/variant_dataset/00-common_all_intersect_smooth_1_active_motif_1k_cpg_dataset.txt`
 
-- Format: Tab‑separated values with header
-- Purpose: Processed dataset ready for variant effect calculation in the next step
+- **Format**: Tab‑separated values with header
+- **Purpose**: Processed dataset ready for variant effect calculation in the next step
 
 **Arguments (required)**  
-`--input_variant_cpg_file`: Path to the variant‑CpG file generated in step 2.2 (`00-common_all_intersect_smooth_1_active_motif_1k_cpg.txt`).
+`--input_variant_cpg_file`: Path to the variant‑CpG file generated in step 2.2 (`00-common_all_intersect_smooth_1_active_motif_1k_cpg.txt`).  
 `--output_variant_cpg_dataset_file`: Path for the output variant dataset file.
 
-### 3. Calculate Variant Effects on Methylation
-This step uses MethylAI to predict the effect of genetic variants on DNA methylation levels by comparing predictions for reference and alternative alleles.
+### 3. Predict Variant Effects on DNA Methylation
+
+This step uses MethylAI to predict the effect of variants on DNA methylation levels by comparing predictions for reference and alternative alleles.
 
 ```bash
 # Create output directory
@@ -802,15 +826,15 @@ chr, POS, RSID, REF, ALT, ALT_split, variant_start, variant_ref_len, variant_alt
   - Final column: `cg_change` (binary flag, 0 or 1) indicates whether the variant disrupts a canonical CpG dinucleotide sequence (1 = disrupted). Note: Rows with `cg_change = 1` should be filtered out in downstream analyses.
 
 **Arguments (required)**  
-`--variant_dataset_file`: Path to the variant dataset file generated in the previous step (`00-common_all_intersect_smooth_1_active_motif_1k_cpg_dataset.txt`).  
+`--variant_dataset_file`: Path to the variant dataset file generated in the step 2 (`00-common_all_intersect_smooth_1_active_motif_1k_cpg_dataset.txt`).  
 `--dataset_info_file`: Path to the dataset information file (e.g., `encode_dataset_info.txt` from Fine‑tuning Tutorial 1).  
-`--config_file`: MethylAI configuration file (Python script). Note: This analysis also uses the genome_fasta_file path specified in the config.  
+`--config_file`: MethylAI configuration file (Python script). Note: This analysis also uses the `genome_fasta_file` path specified in the config.  
 `--config_dict_name`: Name of the Python dictionary variable in the config file that holds the configuration.  
 `--model_ckpt`: Path to the MethylAI checkpoint file.  
 `--gpu_id`: ID of the GPU to use for computation.  
 `--batch_size`: Batch size for the DataLoader during inference.  
 `--num_workers`: Number of parallel workers for the DataLoader.  
-`--dataset_index`: Index of the sample to analyze (must match the dataset index used for active motif identification). For other analyses, you may specify multiple indices separated by spaces, or use 0 to analyze all samples.  
+`--dataset_index`: Index of the sample to analyze (must match the dataset index used for active motif identification). For other analyses, you may specify multiple indices separated by spaces, or use `0` to analyze all samples.  
 `--output_folder`: Directory to store output files.  
 `--output_prefix`: Prefix for output filenames.
 
@@ -846,9 +870,9 @@ python -u src/analysis_variant/analyze_variant_effect.py --variant_effect_file r
 For each variant, the CpG site with the largest absolute effect size is retained as the representative site.
 
 **Arguments (required)**  
-`--variant_effect_file`: Path to the variant effect file (`00-common_all_intersect_smooth_1_active_motif_variant_prediction_dataframe.txt`) generated in the previous step.  
+`--variant_effect_file`: Path to the variant effect file (`00-common_all_intersect_smooth_1_active_motif_variant_prediction_dataframe.txt`) generated in the step 3.  
 `--variant_active_motif_detail_file`: Path to the variant‑motif overlap detail file (`00-common_all_intersect_smooth_1_active_motif_detail.txt`) generated in Step 2.1.  
-`--dataset_index`: Index of the sample to analyze (must match the dataset index used for active motif identification).  
+`--dataset_index`: Index of the sample to analyze (**must match the dataset index used for active motif identification**).  
 `--output_folder`: Directory to store output files.  
 `--output_prefix`: Prefix for output filenames.  
 
