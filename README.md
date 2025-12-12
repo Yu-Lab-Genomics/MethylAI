@@ -216,27 +216,27 @@ wget -c -P data/encode -i data/encode/encode_wgbs_link.txt
 Preprocessing to extract coverage and mc values from WGBS data.
 
 ```bash
-python scripts/preprocess_encode_data.py \
-  --input_folder data/encode \
-  --input_file_suffix .bed.gz \
-  --output_folder data/encode_preprocessed \
-  --output_log_file preprocess.log \
-  --reference_cpg_coordinate_file data/genome/cpg_coordinate_hg38.chr1-22.sort.bed.gz
+python src/preprocess/preprocess_encode_data.py \
+--input_folder data/encode \
+--input_file_suffix .bed.gz \
+--output_folder data/encode_preprocess \
+--output_log_file preprocess.log \
+--reference_cpg_coordinate_file data/genome/cpg_coordinate_hg38.chr1-22.sort.bed.gz 
 ```
 **Arguments (required)**
-- `--input_folder`: Input directory with ENCODE WGBS datasets
-- `--input_file_suffix`:  
-- `--output_folder`: Output directory for processed data
-- `--output_log_file`:  
+`--input_folder`: Input directory with ENCODE WGBS datasets  
+`--input_file_suffix`: Suffix pattern to identify ENCODE WGBS data file (both .bed.gz and .bed are acceptable)  
+`--output_folder`: Output directory for processed data  
+`--output_log_file`: log filename  
 
 **Arguments (optional)**
-- `--reference_cpg_coordinate_file`: reference CpG coordinate BED file for methylation data integration
+- `--reference_cpg_coordinate_file`: reference CpG coordinate BED file for methylation data integration (both .bed.gz and .bed are acceptable)
 
 #### 2.2. Obtain Raw and Smoothed Methylation Values
 The R script applies the BSmooth algorithm from the bsseq R package  to generate both raw and smoothed methylation values for downstream analysis.
 ```bash
 Rscript src/script/bsmooth.R \
-  data/encode_preprocessed \
+  data/encode_preprocess \
   .preprocessed.txt \
   64 \
   smooth_methylation_info.txt \
@@ -256,8 +256,7 @@ Rscript src/script/bsmooth.R \
 
 #### 2.3. Generate train/validation/test dataset files
 ```bash
-
-python src/preprocess/generate_dataset.py \
+python -u src/preprocess/generate_dataset.py \
 --smooth_methylation_file data/encode_preprocess/smoothed_methylation_data.txt.gz \
 --data_info_filedata/encode_preprocess/smoothed_methylation_info.txt \
 --genome_fasta_file data/genome/hg38.fa \
