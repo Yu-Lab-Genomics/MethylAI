@@ -235,7 +235,7 @@ python src/preprocess/preprocess_encode_data.py \
 #### 2.2. Obtain Raw and Smoothed Methylation Values
 The R script applies the BSmooth algorithm from the bsseq R package  to generate both raw and smoothed methylation values for downstream analysis.
 ```bash
-Rscript src/script/bsmooth.R \
+Rscript src/preprocess/bsmooth.R \
   data/encode_preprocess \
   .preprocessed.txt \
   64 \
@@ -258,11 +258,12 @@ Rscript src/script/bsmooth.R \
 ```bash
 python -u src/preprocess/generate_dataset.py \
 --smooth_methylation_file data/encode_preprocess/smoothed_methylation_data.txt.gz \
---data_info_filedata/encode_preprocess/smoothed_methylation_info.txt \
+--data_info_file data/encode_preprocess/smoothed_methylation_info.txt \
 --genome_fasta_file data/genome/hg38.fa \
 --chrom_size_file data/genome/hg38.chrom.sizes \
 --output_folder data/encode_dataset \
 --output_prefix encode
+> data/encode_preprocess/generate_dataset.log 2>&1 &
 ```
 
 **Expected output:**  
