@@ -76,7 +76,7 @@ conda create -n methylai python=3.10 mamba
 conda activate methylai
 
 # Install dependencies (will be available soon)
-#pip install -r requirements.txt
+# pip install -r requirements.txt
 
 # or install necessary dependencies
 mamba install pytorch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 pytorch-cuda=12.4 -c pytorch -c nvidia
@@ -132,12 +132,12 @@ Run a quick demo to ensure your preparation is correct. This will predict methyl
 python demo/demo.py \
 --cpg_coordinate demo/demo_data/cpg_coordinate.txt \
 --genome_fasta data/genome/hg38.fa \
---config_file configs/methylai_finetune_human_cell_type.py \
+--config_file config/finetune_human_cell_type.py \
 --config_dict_name methylai_config_dict \
 --model_ckpt checkpoint/MethylAI_finetune_human_cell_type.pth \
 --gpu_id 0 \
---batch_size 200 \
---num_workers 8 \
+--batch_size 100 \
+--num_workers 4 \
 --output_folder demo/demo_result/ \
 --output_prefix demo \
 --reverse_complement_augmentation \
@@ -153,12 +153,12 @@ The following output files will be generated in the specified output directory:
   - Columns 1-3: BED-format coordinates (chr, start, end)
   - Subsequent columns: Methylation predictions formatted as `prediction_{index}`
 - **Prediction Types**:
-  - **Smoothed site methylation level** (indices 0-206)
-  - **Raw site methylation level** (indices 207-413)
+  - **Smoothed site methylation level** (index 0-206)
+  - **Raw site methylation level** (index 207-413)
   - **Regional methylation levels**:
-    - 1kb window (indices 414-620)
-    - 500bp window (indices 621-827)
-    - 200bp window (indices 828-1034)
+    - 1kb window (index 414-620)
+    - 500bp window (index 621-827)
+    - 200bp window (index 828-1034)
 - **Note**: CpG coordinate order corresponds exactly to the input `cpg_coordinate.txt` file. For detailed interpretation of methylation level predictions, please refer to our publication (see **Citation** section).
 
 **2. Visualization Files (Optional)**
@@ -172,8 +172,8 @@ When `--output_bedgraph` is specified:
 **Arguments (required)**  
 `--cpg_coordinate`: BED-formatted file (zero-base) containing CpG site coordinates. Contextual sequences will be extracted for model input.  
 `--genome_fasta`: Reference genome FASTA file for sequence extraction.  
-`--config_file`:  Python configuration file defining model architecture and hyperparameters.  
-`--config_dict_name`: Name of the Python dictionary variable containing configuration parameters.  
+`--config_file`:  Path to the Python configuration file.  
+`--config_dict_name`:  Name of the Python dictionary variable (within the config file) that holds the configuration.  
 `--model_ckpt`: Path to the model checkpoint file.  
 `--gpu_id`: GPU device for computation.  
 `--batch_size`: Batch size for DataLoader during inference.  
@@ -183,9 +183,7 @@ When `--output_bedgraph` is specified:
 **Arguments (optional)**  
 `--output_prefix`: Custom prefix for output files.  
 `--reverse_complement_augmentation`: Enable reverse complement data augmentation.  
-`--output_bedgraph`: Generate methylation tracks in bedGraph format for genome browser visualization.  
-
-**⚠️ Technical Note**: The MethylAI model is designed to predict both site-specific and regional methylation levels. Consequently, the program does not validate whether input coordinates correspond to canonical CpG dinucleotides. We caution that prediction accuracy for non-CpG sites has not been systematically evaluated and may not reflect biological reality.
+`--output_bedgraph`: Generate methylation tracks in bedGraph format for genome browser visualization.
 
 ### Note
 
@@ -199,6 +197,8 @@ Ensure that the --config_file, --config_dict_name, and --model_ckpt arguments po
 Execute demo/demo.py as described in the Demo section. The output will provide MethylAI’s predicted methylation levels for the chromosome 11 test set.
 4. Fine‑tune on your own data (optional)  
 To adapt MethylAI to your own dataset, follow the Fine‑tuning Tutorial 1 and 2 to fine‑tune a model that can serve as a baseline for your specific biological context.
+
+**⚠️ Technical Note**: The MethylAI model is designed to predict both site-specific and regional methylation levels. Consequently, the program does not validate whether input coordinates correspond to canonical CpG dinucleotides. We caution that prediction accuracy for non-CpG sites has not been systematically evaluated and may not reflect biological reality.
 
 ---
 

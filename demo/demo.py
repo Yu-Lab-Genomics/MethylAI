@@ -43,20 +43,6 @@ def demo(cpg_coordinate_file: str, genome_fasta_file: str,
     if is_output_bedgraph_format:
         inference_tools.output_prediction_bedgraph_format()
 
-def test_demo():
-    demo(cpg_coordinate_file='demo_data/cpg_coordinate.txt',
-         genome_fasta_file='../data/genome/hg38.fa',
-         config_file='../configs/methylai_finetune_encode.py',
-         config_dict_name='methylai_config_dict',
-         model_state_file='../checkpoint/MethylAI_finetune_encode.pth',
-         gpu_id=0,
-         batch_size=200,
-         num_workers=8,
-         is_reverse_complement_augmentation=True,
-         is_output_bedgraph_format=False,
-         output_folder='demo_result',
-         output_prefix='demo')
-
 def main_argparse():
     parser = argparse.ArgumentParser(description='demo script')
     # required parameter
@@ -90,5 +76,4 @@ def main_argparse():
          output_prefix=args.output_prefix)
 
 if __name__ == "__main__":
-    # test_demo()
     main_argparse()
