@@ -2,10 +2,6 @@ import os
 from abc import ABC, abstractmethod
 import glob
 import polars as pl
-import sys
-from pathlib import Path
-project_root = Path(__file__).parents[3]
-sys.path.insert(0, str(project_root))
 from MethylAI.src.utils.utils import check_output_folder
 
 class MethylationFile(ABC):
@@ -28,9 +24,6 @@ class MethylationFile(ABC):
         self.reference_cpg_coordinate_pldf = pl.DataFrame()
         if self.reference_cpg_coordinate_file:
             self._input_reference_cpg_coordinate()
-            self.is_merge_forward_reverse = False
-        else:
-            self.is_merge_forward_reverse = True
         # self.process_log_list：每个文件产生一个str描述该文件存在的问题（目前有2个问题：坐标错误、染色体不全），每个文件运行结束后保存到log文件中
         self.process_log_list = []
         # 输出文件夹
@@ -59,12 +52,11 @@ class MethylationFile(ABC):
             self.process_log_list.append(self.methylation_file)
             # 读取当前文件
             self._input_methylation_pldf()
-            # 如果需要则合并正负链
-            if self.is_merge_forward_reverse:
-                self._merge_forward_reverse()
-            # 把数据合并到cg_reference
+            # 把数据合并到reference cpg coordinate，或仅合并正负链
             if self.reference_cpg_coordinate_file:
                 self._merge_forward_reverse_reference_cpg_coordinate()
+            else:
+                self._merge_forward_reverse()
             self._output_methylation_pldf_and_log()
 
     @abstractmethod
@@ -77,6 +69,8 @@ class MethylationFile(ABC):
         # 最终需要的列 & 重命名
         final_col_list = ['chr', 'start', 'end', 'merge_mc', 'merge_cov']
         rename_final_col_list = ['chr', 'start', 'end', 'mc', 'cov']
+        # 根据chr、start排序
+        self.methylation_pldf = self.methylation_pldf.sort(by=['chr', 'start'])
         # 记录mc_sum、cov_sum
         self._record_mc_cov_info_to_log('before merge')
         # 拆分正负链
@@ -114,6 +108,8 @@ class MethylationFile(ABC):
         # 最终需要的列 & 重命名
         final_col_list = ['chr', 'start', 'end', 'merge_mc', 'merge_cov']
         rename_final_col_list = ['chr', 'start', 'end', 'mc', 'cov']
+        # 根据chr、start排序
+        self.methylation_pldf = self.methylation_pldf.sort(by=['chr', 'start'])
         # 记录mc_sum、cov_sum
         self._record_mc_cov_info_to_log('before merge')
         # 拆分正负链
@@ -155,12 +151,12 @@ class MethylationFile(ABC):
         self.process_log_list.append(mc_cov_info)
 
     def _output_methylation_pldf_and_log(self):
-        # filename
+        # base name
         base_name = os.path.basename(self.methylation_file)
         base_name = base_name.replace(self.input_file_suffix, '.preprocessed.txt')
+        # output name
         output_file = f'{self.output_folder}/{base_name}'
         print(f'output: {output_file}')
-        # output
         self.methylation_pldf.write_csv(output_file, separator='\t')
         # 输出self.process_log_list到log文件，然后清空self.process_log_list
         output_process_log = '; '.join(self.process_log_list) + '\n'
@@ -179,7 +175,6 @@ class EncodeMethylationFile(MethylationFile):
         # 读取文件
         print(f'input: {self.methylation_file}')
         self.methylation_pldf = pl.read_csv(self.methylation_file, separator='\t', has_header=False)
-        #
         if self.methylation_pldf.shape[1] == 11:
             # 在log中进行记录
             log_str = 'col_11'
@@ -190,10 +185,11 @@ class EncodeMethylationFile(MethylationFile):
         else:
             # 设置列名
             self.methylation_pldf.columns = col_name_list
+            # 保留type为CG的类型
             self.methylation_pldf = self.methylation_pldf.filter(
                 pl.col('sample_genotype').is_in(['CG'])
             )
-        # 保留type为CG的类型，保留chr_list中的chr
+        # 保留chr_list中的chr
         self.methylation_pldf = self.methylation_pldf.filter(
             pl.col('chr').is_in(self.chr_list),
         )
@@ -205,5 +201,28 @@ class EncodeMethylationFile(MethylationFile):
         self.methylation_pldf = self.methylation_pldf[['chr', 'start', 'mc', 'cov']]
         # 把mc, start, end 设置为int类型
         self.methylation_pldf = self.methylation_pldf.cast({'mc': int, 'start': int})
-        # 根据chr、start排序
-        self.methylation_pldf = self.methylation_pldf.sort(by=['chr', 'start'])
+
+
+class BismarkMethylationFile(MethylationFile):
+    def _input_methylation_pldf(self):
+        # 列名
+        col_name_list = ['chr', 'start', 'end', 'mc_present', 'mc', 'unmc']
+        # 读取文件
+        print(f'input: {self.methylation_file}')
+        self.methylation_pldf = pl.read_csv(self.methylation_file, separator='\t', has_header=False, infer_schema_length=100000)
+        self.methylation_pldf.columns = col_name_list
+        # 保留type为CG的类型，保留chr_list中的chr
+        self.methylation_pldf = self.methylation_pldf.filter(
+            pl.col('chr').is_in(self.chr_list),
+        )
+        # 计算cov
+        self.methylation_pldf = self.methylation_pldf.with_columns(
+            (pl.col('mc') + pl.col('unmc')).alias('cov')
+        )
+        # 保留需要的列
+        self.methylation_pldf = self.methylation_pldf[['chr', 'start', 'mc', 'cov']]
+        # 把mc, start, end 设置为int类型
+        self.methylation_pldf = self.methylation_pldf.cast({'mc': int, 'start': int})
+
+
+

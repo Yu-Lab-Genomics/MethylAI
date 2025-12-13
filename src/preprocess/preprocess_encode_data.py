@@ -37,7 +37,6 @@ def main_argparse():
     methylation_bed_file.preprocess_all_bed_file()
 
 if __name__ == "__main__":
-    # main_main_preprocess_methylation_file()
     main_argparse()
 
 

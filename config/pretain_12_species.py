@@ -52,8 +52,8 @@ pretraining_parameter_dict = {
     'cosine_annealing_lr_epoch_number': 1,
     'is_calculate_pcc_and_scc': False,
     'output_folder': '1_train',
-    'pretrain_snapshot_path': None,
-    'snapshot_path': None,
+    'pretrain_checkpoint_path': None,
+    'checkpoint_path': None,
     'is_run_validation_at_first': False,
     # 模型设置
     'input_block_channel': [20, 190, 30],
