@@ -240,14 +240,14 @@ The script generates `.preprocessed.txt` files in the specified `--output_folder
   - 4: mc (number of reads showing methylation at the position). 
   - 5: cov (total read coverage at the position).
 
-**Arguments (required)**
-- `--input_folder`: Directory containing the downloaded ENCODE WGBS files.  
-- `--input_file_suffix`: Suffix to identify the input files (e.g., .bed.gz or .bed).  
-- `--output_folder`: Directory where preprocessed files will be saved.  
-- `--output_log_file`: Filename for the processing log.  
+**Arguments (required)**  
+`--input_folder`: Directory containing the downloaded ENCODE WGBS files.  
+`--input_file_suffix`: Suffix to identify the input files (e.g., .bed.gz or .bed).  
+`--output_folder`: Directory where preprocessed files will be saved.  
+`--output_log_file`: Filename for the processing log.  
 
-**Arguments (optional)**
-- `--reference_cpg_coordinate_file`: Reference CpG coordinate BED file (.bed or .bed.gz). If provided, methylation data is aligned to these coordinates for downstream analysis integration.
+**Arguments (optional)**  
+`--reference_cpg_coordinate_file`: Reference CpG coordinate BED file (.bed or .bed.gz). If provided, methylation data is aligned to these coordinates for downstream analysis integration.
 
 #### 2.2. Obtain Raw and Smoothed Methylation Values
 
@@ -394,20 +394,20 @@ src/training/finetune.py \
 ```
 
 **Environment Setting**  
-- `CUDA_VISIBLE_DEVICES`: Specifies the GPU devices available for the job (default: `0,1,2,3`). Adjust this variable to match your hardware configuration.  
-- `OMP_NUM_THREADS`: Sets the number of OpenMP threads for CPU‑parallel operations (default: 4). Modify based on your CPU core count.
+`CUDA_VISIBLE_DEVICES`: Specifies the GPU devices available for the job (default: `0,1,2,3`). Adjust this variable to match your hardware configuration.  
+`OMP_NUM_THREADS`: Sets the number of OpenMP threads for CPU‑parallel operations (default: 4). Modify based on your CPU core count.
 
 **Arguments (required)**  
-- `--config_file`: Path to the Python configuration file defining the model and training setup.  
-- `--config_dict_name`:  Name of the Python dictionary variable (within the config file) that holds the configuration.
+`--config_file`: Path to the Python configuration file defining the model and training setup.  
+`--config_dict_name`:  Name of the Python dictionary variable (within the config file) that holds the configuration.
 
 **Arguments (optional)**  
-- `--print_loss_step`: Interval (in training steps) for printing loss values to monitor training stability and detect NaN issues (default: 500).  
-- `--print_model_output_step`: Interval (in training steps) for logging model outputs to monitor training stability and detect NaN issues (default: 5000).
+`--print_loss_step`: Interval (in training steps) for printing loss values to monitor training stability and detect NaN issues (default: 500).  
+`--print_model_output_step`: Interval (in training steps) for logging model outputs to monitor training stability and detect NaN issues (default: 5000).
 
 **Logging**  
-- The `nohup` command allows the process to continue running after disconnecting from the terminal.
-- `result/finetune_tutorial_encode.log`: All runtime messages (stdout and stderr) are redirected to this log file. You can change the path and filename as needed.  
+The `nohup` command allows the process to continue running after disconnecting from the terminal.
+`result/finetune_tutorial_encode.log`: All runtime messages (stdout and stderr) are redirected to this log file. You can change the path and filename as needed.  
 
 **Expected output:**  
 Upon successful fine-tuning, the following files will be generated in the directory specified by the `'output_folder'` key in `methylai_config_dict`:
