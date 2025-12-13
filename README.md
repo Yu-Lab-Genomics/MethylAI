@@ -59,7 +59,7 @@ This section provides the dependencies and data acquisition for MethylAI.
 
 ### Environment Setup
 
-We recommend using [Conda](https://www.anaconda.com/) for environment management to ensure reproducibility.
+We recommend using Conda (https://www.anaconda.com/) for environment management to ensure reproducibility.
 
 #### 1. Clone the Repository
 
@@ -483,7 +483,7 @@ python src/preprocess/generate_dataset.py \
 
 #### 3.1 Copy and adapt the configuration file
 
-Duplicate config/finetune_tutorial_encode.py as config/finetune_tutorial_bismark.py. Then update the following keys in the methylai_config_dict dictionary:
+Duplicate `config/finetune_tutorial_encode.py` as `config/finetune_tutorial_bismark.py`. Then update the following keys in the `methylai_config_dict` dictionary:
 
 | Key                      | Description                                                                                          |
 |--------------------------|------------------------------------------------------------------------------------------------------|
@@ -625,7 +625,9 @@ The script creates a folder named `{sample_name}_index_{model_output_index}` wit
 - `delta.npy`: delta value. See (https://captum.ai/api/deep_lift_shap.html) for details.
 - `dna_attribution.npy`: DNA‑level attribution.
 - `dna_one_hot.npy`: One‑hot encoded DNA sequences.  
+
 **Note**: `attribution.npy` and `dna_one_hot.npy` are formatted for direct input to TF‑MoDISco (https://github.com/kundajelab/tfmodisco).  
+
 3. `bedgraph` directory (if --output_bedgraph is set):  
 Contains per‑sequence attribution scores in bedGraph format. Files are named as `index_{model_output_index}_{chr}_{sequence_start}_{cpg_start}.bedgraph`. These can be converted to BigWig format (using `ucsc_tools/bedGraphToBigWig`) for visualization in genome browsers such as the WashU Epigenome Browser (https://epigenomegateway.wustl.edu/).
 
@@ -665,12 +667,12 @@ nohup python -u src/analysis_motif/evaluate_representative_cpg.py \
 ```
 
 **Expected Output**  
-**File**: `encode_smooth_1_evaluation_dataframe.txt`  
-**Format**: Tab‑separated values with header  
-**Columns**:  
-- Columns 1‑3: BED‑format coordinates of representative CpG sites (`chr`, `start`, `end`)
-- Smoothed, raw, and regional methylation levels, and coverage values (as in the input file)
-- MethylAI predictions, with column names prefixed by `prediction_`
+- **File**: `encode_smooth_1_evaluation_dataframe.txt`  
+- **Format**: Tab‑separated values with header  
+- **Columns**:  
+  - Columns 1‑3: BED‑format coordinates of representative CpG sites (`chr`, `start`, `end`)
+  - Smoothed, raw, and regional methylation levels, and coverage values (as in the input file)
+  - MethylAI predictions, with column names prefixed by `prediction_`
 
 **Arguments (required)**  
 `--representative_cpg_file`: Path to the representative CpG sites file generated in Step 2.  
@@ -702,25 +704,25 @@ nohup python -u src/analysis_motif/get_motif_statistic.py \
 ```
 
 **Expected Output**  
-**File**: `encode_smooth_1_motif_statistic_dataframe.txt`  
-**Format**: Tab‑separated values with header  
-**Columns**:  
-- Columns 1‑8: Information from JASPAR2024_400.bed:
-  - `chr`, `motif_start`, `motif_end`: motif coordinates
-  - `motif_id`: JASPAR motif ID
-  - `motif_score`: motif match score
-  - `motif_strand`: motif strand
-  - `motif_name`: motif name
-  - `motif_len`: motif length
-- Next columns: Relationship between the motif and the representative CpG site:
-  - `cg_start`, `cg_end`: CpG site coordinates
-  - `input_dna_start`, `input_dna_end`: start and end positions of the input DNA sequence
-  - `motif_cg_distance`: distance between the motif and the CpG site
-- Final columns: Attribution score statistics:
-  - `motif_attribution_sum`: sum of attribution scores over the motif site
-  - `motif_attribution_mean`: mean attribution score over the motif site
-  - `motif_attribution_abs_sum`: sum of absolute attribution scores over the motif site
-  - `motif_attribution_abs_mean`: mean absolute attribution score over the motif site
+- **File**: `encode_smooth_1_motif_statistic_dataframe.txt`  
+- **Format**: Tab‑separated values with header  
+- **Columns**:  
+  - Columns 1‑8: Information from JASPAR2024_400.bed:
+    - `chr`, `motif_start`, `motif_end`: motif coordinates
+    - `motif_id`: JASPAR motif ID
+    - `motif_score`: motif match score
+    - `motif_strand`: motif strand
+    - `motif_name`: motif name
+    - `motif_len`: motif length
+  - Next columns: Relationship between the motif and the representative CpG site:
+    - `cg_start`, `cg_end`: CpG site coordinates
+    - `input_dna_start`, `input_dna_end`: start and end positions of the input DNA sequence
+    - `motif_cg_distance`: distance between the motif and the CpG site
+  - Final columns: Attribution score statistics:
+    - `motif_attribution_sum`: sum of attribution scores over the motif site
+    - `motif_attribution_mean`: mean attribution score over the motif site
+    - `motif_attribution_abs_sum`: sum of absolute attribution scores over the motif site
+    - `motif_attribution_abs_mean`: mean absolute attribution score over the motif site
 
 **Arguments (required)**  
 `--sequence_attribution_folder`: Path to the folder containing sequence attribution results from Step 3 (e.g., `smooth_1_index_0`).  
@@ -752,21 +754,21 @@ python -u src/analysis_motif/get_active_motif.py \
 
 The following files will be generated in the specified `--output_folder`:  
 
-`evaluation_dataframe.txt`: Prediction accuracy metrics for each representative CpG site.  
+1. `evaluation_dataframe.txt`: Prediction accuracy metrics for each representative CpG site.  
 
-`smooth_1_motif_statistic.txt`: Tab‑separated file containing unfiltered motif statistics, including:  
-- Representative CpG site information: `cg_chr_start` (CpG ID), `low_me_region_id`, `cg_start`, `cg_end`, `input_dna_start`, `input_dna_end`, `smooth`, `prediction_smooth`, `coverage`, `abs_diff_smooth`, `smooth_index`.  
-- Motif information: `motif_id_name`, `motif_id`, `motif_name`, `motif_start`, `motif_end`, `motif_len`, `motif_strand`, `motif_relative_start`, `motif_relative_end`, `motif_cg_distance`, `motif_score`.  
-- Attribution score statistics: `motif_attribution_sum`, `motif_attribution_abs_sum`, `motif_attribution_mean`, `motif_attribution_abs_mean`, `motif_activation_score`.  
+2. `smooth_1_motif_statistic.txt`: Tab‑separated file containing unfiltered motif statistics, including:  
+   - Representative CpG site information: `cg_chr_start` (CpG ID), `low_me_region_id`, `cg_start`, `cg_end`, `input_dna_start`, `input_dna_end`, `smooth`, `prediction_smooth`, `coverage`, `abs_diff_smooth`, `smooth_index`.  
+   - Motif information: `motif_id_name`, `motif_id`, `motif_name`, `motif_start`, `motif_end`, `motif_len`, `motif_strand`, `motif_relative_start`, `motif_relative_end`, `motif_cg_distance`, `motif_score`.  
+   - Attribution score statistics: `motif_attribution_sum`, `motif_attribution_abs_sum`, `motif_attribution_mean`, `motif_attribution_abs_mean`, `motif_activation_score`.  
 
-`smooth_1_motif_statistic_filtered.txt`: Filtered version of the above, after applying `--threshold_max_motif_cpg_distance` and `--threshold_max_prediction_error`.  
+3. `smooth_1_motif_statistic_filtered.txt`: Filtered version of the above, after applying `--threshold_max_motif_cpg_distance` and `--threshold_max_prediction_error`.  
 
-`smooth_1_active_motif_statistic.txt`: Further filtered to retain only motifs with attribution scores passing `--threshold_motif_attribution_mean`.  
-`smooth_1_active_motif_summary.txt`: Summary per TF motif (`motif_id_name`), including mean motif_activation_score and counts of hypomethylated regions/windows where the motif is active.  
+4. `smooth_1_active_motif_statistic.txt`: Further filtered to retain only motifs with attribution scores passing `--threshold_motif_attribution_mean`.  
+5. `smooth_1_active_motif_summary.txt`: Summary per TF motif (`motif_id_name`), including mean motif_activation_score and counts of hypomethylated regions/windows where the motif is active.  
 
-`smooth_1_all_motif.bed`: BED file of all motif sites from smooth_1_motif_statistic_filtered.txt.  
-`smooth_1_active_motif.bed`: BED file of active motif sites from smooth_1_active_motif_statistic.txt.  
-`smooth_1_inactive_motif.bed`: BED file of inactive motif sites, generated by subtracting active motifs from all motifs (bedtools intersect -v).
+6. `smooth_1_all_motif.bed`: BED file of all motif sites from smooth_1_motif_statistic_filtered.txt.  
+7. `smooth_1_active_motif.bed`: BED file of active motif sites from smooth_1_active_motif_statistic.txt.  
+8. `smooth_1_inactive_motif.bed`: BED file of inactive motif sites, generated by subtracting active motifs from all motifs (bedtools intersect -v).
 
 **Arguments (required)**  
 `--motif_statistic_file`: Path to the motif statistics file (`motif_statistic_dataframe.txt`) from Step 5.  
@@ -864,10 +866,9 @@ python src/analysis_variant/get_variant_cpg_dataset.py \
 ```
 
 **Expected Output:**  
-`data/variant_dataset/00-common_all_intersect_smooth_1_active_motif_1k_cpg_dataset.txt`
-
-- **Format**: Tab‑separated values with header
-- **Purpose**: Processed dataset ready for variant effect calculation in the next step
+- `data/variant_dataset/00-common_all_intersect_smooth_1_active_motif_1k_cpg_dataset.txt`
+  - **Format**: Tab‑separated values with header
+  - **Purpose**: Processed dataset ready for variant effect calculation in the next step
 
 **Arguments (required)**  
 `--input_variant_cpg_file`: Path to the variant‑CpG file generated in step 2.2 (`00-common_all_intersect_smooth_1_active_motif_1k_cpg.txt`).  
@@ -939,7 +940,7 @@ python -u src/analysis_variant/analyze_variant_effect.py --variant_effect_file r
 **Note**: Variants that disrupt CpG dinucleotides (i.e., rows with cg_change = 1) are automatically filtered out in this step, as the focus is on non‑CpG‑altering variants that may modulate methylation levels.
 
 **Expected Output:**  
-**File:** `00-common_all_intersect_smooth_1_active_motif_variant_analysis_result.txt`  
+`00-common_all_intersect_smooth_1_active_motif_variant_analysis_result.txt`  
 - **Format**: Tab‑separated values with header
 - **Contents**: 
   - Columns 1‑12: Variant and CpG information from the input dataset (same as the previous step): chr, POS, RSID, REF, ALT, ALT_split, variant_start, variant_ref_len, variant_alt_len, variant_cg_distance, cg_start, cg_end
