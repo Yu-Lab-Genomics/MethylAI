@@ -5,8 +5,6 @@
 [![license](https://img.shields.io/badge/Captum_-0.6.8_-purple)](https://captum.ai/)
 [![license](https://img.shields.io/badge/R_-4.3.3_-red)](https://www.r-project.org/)
 
-> 🚧 **Repository Under Active Development** - Full release coming soon! We're currently finalizing the codebase and documentation.  
-
 MethylAI is a convolutional neural network (CNN) based model that predicts DNA methylation levels at CpG sites from one-hot encoded DNA sequences. MethylAI was pre-trained on the most comprehensive multi-species WGBS dataset, including 1,574 human samples across 52 tissues and other 11 mammals. The model leverages a multi-scale CNN architecture and exponential activations for high accuracy and improved interpretability. Its key applications include decoding the cis-regulatory logic of DNA methylation via integration with DeepSHAP and predicting the impact of genetic variants on methylation landscapes.
 
 ## Key Features & Highlights
