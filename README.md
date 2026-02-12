@@ -79,7 +79,7 @@ conda activate methylai
 # or install necessary dependencies
 mamba install pytorch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 pytorch-cuda=12.4 -c pytorch -c nvidia
 mamba install pandas==2.2.3 numpy==2.1.3 scipy==1.14.1 polars==1.14.0 pyarrow==18.1.0 captum==0.6.0
-mamba install r-base==4.3.3 r-data.table r-r.utils r-glue bioconductor-bsseq bioconductor-biocparallel
+mamba install r-base==4.3.3 r-data.table==1.15.2 r-r.utils==2.12.3 r-glue==1.8.0 bioconductor-bsseq==1.38.1 bioconductor-biocparallel==1.36.0
 mamba install bedtools
 ```
 
