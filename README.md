@@ -73,11 +73,12 @@ cd MethylAI
 conda create -n methylai python=3.10
 conda activate methylai
 
-# install necessary dependencies
+# Install necessary dependencies
 conda install pytorch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 pytorch-cuda=12.4 captum==0.6.0 -c pytorch -c nvidia
-conda install pandas==2.3.3 polars==1.14 scipy
-conda install r-base=4.3.3 r-data.table r-r.utils r-glue bioconductor-bsseq bioconductor-biocparallel -c conda-forge -c bioconda
+conda install pandas==2.3.3 polars==1.14.0 scipy
 conda install bedtools -c bioconda
+
+conda install r-base=4.3.3 r-data.table r-r.utils r-glue bioconductor-bsseq bioconductor-biocparallel -c conda-forge -c bioconda
 ```
 
 ### Download Required Files
@@ -105,7 +106,7 @@ gunzip data/genome/hg38.fa.gz
 #### 3. Download CpG Site Coordinates for hg38
 
 ```bash
-wget -c -P data/genome https://backend.aigenomicsyulab.com/files/model-download/cpg_coordinate_hg38_chr1_22
+wget -c -O data/genome/cpg_coordinate_hg38.chr1-22.sort.bed.gz https://backend.aigenomicsyulab.com/files/model-download/cpg_coordinate_hg38_chr1_22
 ```
 Note: This `cpg_coordinate_hg38.chr1-22.sort.bed.gz` was generated using [wgbstools](https://github.com/nloyfer/wgbs_tools).
 
