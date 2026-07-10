@@ -45,7 +45,7 @@ class VariantInferenceTools:
                                       col_prefix_tuple=('smooth', 'raw', 'window_1000', 'window_500', 'window_200')):
         # 读取data_info_df，产生表头
         data_info_df = pd.read_table(dataset_info_file, sep='\t', header=0)
-        keep_index = data_info_df[data_info_df['is_keep'] == 'yes'].index
+        keep_index = data_info_df[data_info_df['is_pass_qc'] == 'yes'].index
         col_index_list = data_info_df.loc[keep_index, 'dataset_index'].tolist()
         for col_prefix in col_prefix_tuple:
             self.prediction_df_header.extend([f'prediction_{col_prefix}_{index}' for index in col_index_list])
@@ -148,7 +148,7 @@ class VariantInferenceTools:
     def output_variant_prediction_dataframe(
             self, output_prefix_tuple: tuple = None, output_postfix_tuple: tuple = None, output_file: str = None):
         # 选择需要输出的列
-        output_prediction_col_list = self.dataset_prediction_df.columns.tolist()
+        output_prediction_col_list = self.dataset_prediction_df.columns.tolist()[11:]
         if output_prefix_tuple:
             output_prediction_col_list = [col for col in output_prediction_col_list if col.startswith(output_prefix_tuple)]
         if output_postfix_tuple:
