@@ -26,6 +26,8 @@ class VariantDataset(Dataset):
             self.variant_dataset_df = pd.read_pickle(self.variant_dataset_file)
         elif self.variant_dataset_file.endswith('txt'):
             self.variant_dataset_df = pd.read_table(self.variant_dataset_file, sep='\t', header=0)
+        elif self.variant_dataset_file.endswith('tsv'):
+            self.variant_dataset_df = pd.read_table(self.variant_dataset_file, sep='\t', header=0)
         # 删掉variant_cg_distance超过模型输入长度的行
         self.variant_dataset_df = self.variant_dataset_df[
             self.variant_dataset_df['variant_cg_distance'] < self.extent_dna_length
