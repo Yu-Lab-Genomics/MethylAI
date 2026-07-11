@@ -36,13 +36,14 @@ tmp/
 temp/
 
 # Model checkpoints and training artifacts
-checkpoint/*
+checkpoint/**
 *.pth
 *.pt
 *.ckpt
 *.safetensors
 [0-9]*_train/
 [0-9]*_finetune*/
+!checkpoint/README.md
 
 # Downloaded/generated data.
 # Keep the lightweight download manifests under version control.
