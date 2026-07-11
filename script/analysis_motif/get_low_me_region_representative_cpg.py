@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 project_root = Path(__file__).parents[3]
 sys.path.insert(0, str(project_root))
-from MethylAI.src.preprocess.dataset_tools import LowMethylationRegion
+from MethylAI.src.preprocess.methylation_region import LowMethylationRegion
 
 def main_argparse():
     parser = argparse.ArgumentParser(description='Generate modeling dataset')
