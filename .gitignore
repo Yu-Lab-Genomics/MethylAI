@@ -17,7 +17,7 @@ __pycache__/
 .coverage
 htmlcov/
 
-# test folder
+# Test folder
 test/
 
 # Local environments
@@ -36,15 +36,11 @@ tmp/
 temp/
 
 # Model checkpoints and training artifacts
-checkpoint/
-checkpoints/
+checkpoint/*
 *.pth
 *.pt
 *.ckpt
 *.safetensors
-runs/
-wandb/
-lightning_logs/
 [0-9]*_train/
 [0-9]*_finetune*/
 
