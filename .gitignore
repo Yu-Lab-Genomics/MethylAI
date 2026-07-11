@@ -1,7 +1,94 @@
-# Python cache
+# OS/editor files
+.DS_Store
+Thumbs.db
+*~
+.vscode/
+.idea/
+
+# Python cache and local tooling
 __pycache__/
 *.py[cod]
 *$py.class
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.coverage
+htmlcov/
 
-# data & result
+# Local environments
+.venv/
+venv/
+env/
+ENV/
+
+# Logs and temporary files
+*.log
+*.out
+*.err
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Model checkpoints and training artifacts
+checkpoint/
+checkpoints/
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+runs/
+wandb/
+lightning_logs/
+[0-9]*_train/
+[0-9]*_finetune*/
+
+# Downloaded/generated data.
+# Keep the lightweight download manifests under version control.
+data/**
+!data/
+!data/encode/
+!data/encode/encode_wgbs_link.txt
+!data/genome/
+!data/genome/hg38_genome_link.txt
+
+# Downloaded UCSC command-line tools.
+ucsc_tools/**
+!ucsc_tools/
+!ucsc_tools/ucsc_tools_link.txt
+
+# Results and analysis outputs
 result/
+results/
+output/
+outputs/
+demo/result/
+demo/*_result/
+
+# Common large MethylAI/bioinformatics outputs
+*.pkl
+*.pickle
+*.feather
+*.parquet
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.bedgraph
+*.bedGraph
+*.bigwig
+*.bigWig
+*.bw
+*.bb
+*.fa
+*.fasta
+*.fai
+*.2bit
+*.vcf
+*.vcf.gz
+*.bed.gz
+*.bedGraph.gz
+*.cov
+*.txt.gz
