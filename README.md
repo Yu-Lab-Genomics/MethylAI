@@ -126,7 +126,7 @@ Run a quick demo to ensure your preparation is correct. This will predict methyl
 
 ```bash
 python demo/demo.py \
---cpg_coordinate demo/demo_data/cpg_coordinate.txt \
+--cpg_coordinate demo/data/cpg_coordinate.txt \
 --genome_fasta data/genome/hg38.fa \
 --config_file config/finetune_human_cell_type.py \
 --config_dict_name methylai_config_dict \
@@ -134,7 +134,7 @@ python demo/demo.py \
 --gpu_id 0 \
 --batch_size 100 \
 --num_workers 4 \
---output_folder demo/demo_result/ \
+--output_folder demo/result/ \
 --output_prefix demo \
 --reverse_complement_augmentation \
 --output_bedgraph
