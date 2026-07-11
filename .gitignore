@@ -17,6 +17,9 @@ __pycache__/
 .coverage
 htmlcov/
 
+# test folder
+test/
+
 # Local environments
 .venv/
 venv/

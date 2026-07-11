@@ -6,7 +6,7 @@ sys.path.insert(0, str(project_root))
 from MethylAI.src.model.methylai import MethylAI
 from MethylAI.src.utils.utils import load_config
 from MethylAI.src.dataset.validation_dataset import MethylAIValidationDataset
-from MethylAI.src.utils.inference import InferenceTools
+from MethylAI.src.inference.inference import InferenceTools
 
 def demo(cpg_coordinate_file: str, genome_fasta_file: str,
          config_file: str, config_dict_name, model_state_file: str, gpu_id: int,

@@ -63,28 +63,3 @@ class VariantAnalysis:
         variant_analysis_result_file = f'{self.output_prefix}_variant_analysis_result.txt'
         self.variant_analysis_result_pldf.write_csv(variant_analysis_result_file, separator='\t')
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

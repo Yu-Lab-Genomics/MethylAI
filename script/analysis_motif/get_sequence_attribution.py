@@ -5,7 +5,7 @@ project_root = Path(__file__).parents[3]
 sys.path.insert(0, str(project_root))
 from MethylAI.src.model.methylai import MethylAI
 from MethylAI.src.dataset.captum_dataset import CaptumDataset
-from MethylAI.src.utils.attribution import CaptumTools
+from MethylAI.src.attribution.attribution import CaptumTools
 from MethylAI.src.utils.utils import load_config
 
 def main_argparse():

@@ -3,21 +3,10 @@ import sys
 from pathlib import Path
 project_root = Path(__file__).parents[3]
 sys.path.insert(0, str(project_root))
-from MethylAI.src.utils.preprocess import EncodeMethylationFile
-
-
-def main_preprocess_methylation_file():
-    methylation_bed_file = EncodeMethylationFile(
-        input_folder='',
-        input_file_suffix='',
-        reference_cpg_coordinate_file='',
-        output_folder='8_preprocess',
-        output_log_file='log_8_preprocess.log'
-    )
-    methylation_bed_file.preprocess_all_bed_file()
+from MethylAI.src.preprocess.preprocess import BismarkMethylationFile
 
 def main_argparse():
-    parser = argparse.ArgumentParser(description='Preprocess ENCODE DNA methylation file')
+    parser = argparse.ArgumentParser(description='Preprocess DNA methylation file from Bismark.')
     # required parameter
     parser.add_argument('--input_folder', required=True, help='')
     parser.add_argument('--input_file_suffix', required=True, help='')
@@ -27,7 +16,7 @@ def main_argparse():
     parser.add_argument('--reference_cpg_coordinate_file', help='')
     #
     args = parser.parse_args()
-    methylation_bed_file = EncodeMethylationFile(
+    methylation_bed_file = BismarkMethylationFile(
         input_folder=args.input_folder,
         input_file_suffix=args.input_file_suffix,
         reference_cpg_coordinate_file=args.reference_cpg_coordinate_file,
@@ -38,10 +27,3 @@ def main_argparse():
 
 if __name__ == "__main__":
     main_argparse()
-
-
-
-
-
-
-

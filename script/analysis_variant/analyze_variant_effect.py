@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 project_root = Path(__file__).parents[3]
 sys.path.insert(0, str(project_root))
-from MethylAI.src.utils.variant import VariantAnalysis
+from MethylAI.src.variant.variant import VariantAnalysis
 
 def main_argparse():
     parser = argparse.ArgumentParser(description='Analyze variant effect.')

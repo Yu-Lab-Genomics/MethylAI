@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 project_root = Path(__file__).parents[3]
 sys.path.insert(0, str(project_root))
-from MethylAI.src.utils.attribution_motif import JasparBed, CaptumResult, MotifStatistic
+from MethylAI.src.attribution.motif import JasparBed, CaptumResult, MotifStatistic
 
 def main_argparse():
     parser = argparse.ArgumentParser(description='Get motif attribution statistic.')
