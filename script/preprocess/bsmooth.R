@@ -1,97 +1,220 @@
-########################################
-arguments = commandArgs(T)
-wd = arguments[1]
-post_fix = arguments[2]
+arguments = commandArgs(trailingOnly = TRUE)
+
+if (length(arguments) < 5) {
+    stop(
+        paste(
+            "Usage: Rscript bsmooth.R <input_dir> <input_suffix> <thread_number>",
+            "<output_sample_info_file> <output_methylation_file> [smooth_ns] [smooth_h]"
+        )
+    )
+}
+
+input_dir = arguments[1]
+input_suffix = arguments[2]
 thread_number = as.integer(arguments[3])
 output_sample_info_file = arguments[4]
 output_methylation_file = arguments[5]
-if(length(arguments) > 5) {
-  smooth_ns = as.integer(arguments[6])
-  smooth_h = as.integer(arguments[7])
+
+if (length(arguments) > 5) {
+    smooth_ns = as.integer(arguments[6])
+    smooth_h = as.integer(arguments[7])
 } else {
-  smooth_ns = 70
-  smooth_h = 1000
+    smooth_ns = 70
+    smooth_h = 1000
 }
-########################################
-library(bsseq)
-library(BiocParallel)
-library(data.table)
-library(R.utils)
-library(glue)
-########################################
-print(paste0("wd: ", wd))
-print(paste0("post_fix: ", post_fix))
-print(paste0("thread_number: ", thread_number))
-print(paste0("output_sample_info_file: ", output_sample_info_file))
-print(paste0("output_methylation_file: ", output_methylation_file))
-print(paste0("smooth_ns: ", as.character(smooth_ns)))
-print(paste0("smooth_h: ", as.character(smooth_h)))
-########################################
-read_methylation_bed = function(methylation_file, dataset_index) {
-  print(glue("methylation_file: {methylation_file}, dataset_index: {dataset_index}"))
-  methylation_bed = fread(
-    methylation_file, header=T, sep="\t", quote="", nThread=thread_number
-  )
-  # generate BSseq object
-  bs = BSseq(
-    chr = methylation_bed$chr,
-    pos = methylation_bed$start,
-    M = as.matrix(methylation_bed$mc, ncol = 1),
-    Cov = as.matrix(methylation_bed$cov, ncol = 1),
-    sampleNames = dataset_index
-  )
-  return(bs)
+
+suppressPackageStartupMessages({
+    library(arrow)
+    library(BiocParallel)
+    library(bsseq)
+    library(data.table)
+    library(glue)
+})
+
+# 识别输入/输出文件格式，仅支持文本表格和 feather。
+# Detect input/output file formats. Only text tables and feather are supported.
+get_table_format = function(file_path) {
+    lower_path = tolower(file_path)
+    if (endsWith(lower_path, ".feather")) {
+        return("feather")
+    }
+    if (endsWith(lower_path, ".tsv") || endsWith(lower_path, ".tsv.gz")) {
+        return("tsv")
+    }
+    if (endsWith(lower_path, ".txt") || endsWith(lower_path, ".txt.gz")) {
+        return("txt")
+    }
+    stop(glue(
+        "Unsupported file format: {file_path}. ",
+        "Only txt, tsv, and feather are supported."
+    ))
 }
-########################################
-#设置工作路径
-setwd(wd)
-#读取以.bed结尾的文件名
-methylation_bed_file_vector = list.files(pattern=post_fix)
-methylation_bed_file_dataframe = data.frame(
-  dataset_index=1:length(methylation_bed_file_vector), methylation_file=methylation_bed_file_vector
+
+check_positive_integer = function(value, argument_name) {
+    if (is.na(value) || value <= 0) {
+        stop(glue("{argument_name} must be a positive integer."))
+    }
+}
+
+check_output_file = function(file_path) {
+    output_dir = dirname(file_path)
+    if (!dir.exists(output_dir)) {
+        stop(glue("Output directory does not exist: {output_dir}"))
+    }
+    if (file.exists(file_path)) {
+        stop(glue("Output file already exists, please choose another path: {file_path}"))
+    }
+}
+
+read_table = function(file_path) {
+    table_format = get_table_format(file_path)
+    message(glue("Reading methylation file: {file_path}"))
+    if (table_format == "feather") {
+        methylation_dataframe = as.data.frame(arrow::read_feather(file_path))
+    } else {
+        methylation_dataframe = data.table::fread(
+            file_path,
+            header = TRUE,
+            sep = "\t",
+            quote = "",
+            nThread = thread_number,
+            data.table = FALSE
+        )
+    }
+    return(methylation_dataframe)
+}
+
+write_table = function(output_dataframe, file_path) {
+    table_format = get_table_format(file_path)
+    message(glue("Writing output file: {file_path}"))
+    if (table_format == "feather") {
+        arrow::write_feather(output_dataframe, file_path, version = 2, compression = "zstd")
+    } else {
+        data.table::fwrite(
+            output_dataframe,
+            file = file_path,
+            sep = "\t",
+            quote = FALSE,
+            row.names = FALSE,
+            na = "NA"
+        )
+    }
+}
+
+validate_methylation_dataframe = function(methylation_dataframe, methylation_file) {
+    required_columns = c("chr", "start", "end", "mc", "cov")
+    missing_columns = setdiff(required_columns, colnames(methylation_dataframe))
+    if (length(missing_columns) > 0) {
+        stop(glue(
+            "Input file {methylation_file} is missing required columns: ",
+            "{paste(missing_columns, collapse = ', ')}"
+        ))
+    }
+    if (nrow(methylation_dataframe) == 0) {
+        stop(glue("Input file is empty after reading: {methylation_file}"))
+    }
+}
+
+read_methylation_bsseq = function(methylation_file, dataset_index) {
+    methylation_dataframe = read_table(methylation_file)
+    validate_methylation_dataframe(methylation_dataframe, methylation_file)
+
+    # 构建单样本 BSseq 对象，后续按样本顺序 combine。
+    # Build one single-sample BSseq object, then combine samples in order.
+    methylation_bsseq = BSseq(
+        chr = methylation_dataframe$chr,
+        pos = methylation_dataframe$start,
+        M = matrix(methylation_dataframe$mc, ncol = 1),
+        Cov = matrix(methylation_dataframe$cov, ncol = 1),
+        sampleNames = as.character(dataset_index)
+    )
+    return(methylation_bsseq)
+}
+
+make_parallel_param = function(workers) {
+    manager_port = 42000 + (Sys.getpid() %% 10000)
+    message(glue("BiocParallel manager_port: {manager_port}"))
+    return(MulticoreParam(
+        workers = workers,
+        progressbar = TRUE,
+        manager.port = manager_port
+    ))
+}
+
+message(glue("input_dir: {input_dir}"))
+message(glue("input_suffix: {input_suffix}"))
+message(glue("thread_number: {thread_number}"))
+message(glue("output_sample_info_file: {output_sample_info_file}"))
+message(glue("output_methylation_file: {output_methylation_file}"))
+message(glue("smooth_ns: {smooth_ns}"))
+message(glue("smooth_h: {smooth_h}"))
+
+if (!dir.exists(input_dir)) {
+    stop(glue("Input directory does not exist: {input_dir}"))
+}
+check_positive_integer(thread_number, "thread_number")
+check_positive_integer(smooth_ns, "smooth_ns")
+check_positive_integer(smooth_h, "smooth_h")
+invisible(get_table_format(input_suffix))
+invisible(get_table_format(output_sample_info_file))
+invisible(get_table_format(output_methylation_file))
+check_output_file(output_sample_info_file)
+check_output_file(output_methylation_file)
+
+all_input_files = list.files(input_dir, full.names = TRUE)
+input_file_vector = sort(all_input_files[endsWith(basename(all_input_files), input_suffix)])
+if (length(input_file_vector) == 0) {
+    stop(glue("No input files found in {input_dir} with suffix {input_suffix}"))
+}
+if (any(file.size(input_file_vector) == 0)) {
+    stop("At least one input file is empty.")
+}
+
+sample_info_dataframe = data.frame(
+    dataset_index = seq_along(input_file_vector),
+    methylation_file = basename(input_file_vector)
 )
-#输出文件信息
-write.table(methylation_bed_file_dataframe, file=output_sample_info_file,
-            sep="\t", quote=F, row.names=F)
-#读取第1个bed文件，作为combined_methylation_bs的初始化
-combined_methylation_bs = read_methylation_bed(methylation_bed_file_vector[1], "1")
-#使用for循环，combine所有bed文件
-dataset_index = 2
-for (methylation_dataset_index in dataset_index:length(methylation_bed_file_vector)) {
-  methylation_file = methylation_bed_file_vector[methylation_dataset_index]
-  new_methylation_bs = read_methylation_bed(methylation_file, as.character(methylation_dataset_index))
-  combined_methylation_bs = combine(combined_methylation_bs, new_methylation_bs)
+write_table(sample_info_dataframe, output_sample_info_file)
+
+# 逐个读取样本并合并，避免一次性读取所有输入表格。
+# Read and combine samples one by one to avoid loading all source tables at once.
+combined_methylation_bsseq = read_methylation_bsseq(input_file_vector[1], 1)
+if (length(input_file_vector) >= 2) {
+    for (methylation_dataset_index in 2:length(input_file_vector)) {
+        new_methylation_bsseq = read_methylation_bsseq(
+            input_file_vector[methylation_dataset_index],
+            methylation_dataset_index
+        )
+        combined_methylation_bsseq = combine(combined_methylation_bsseq, new_methylation_bsseq)
+    }
 }
-#平滑处理
-smooth_combined_methylation_bs = BSmooth(
-  combined_methylation_bs,
-  ns = smooth_ns,
-  h = smooth_h,
-  BPPARAM = MulticoreParam(workers=thread_number, progressbar=TRUE)
+
+message("Running BSmooth.")
+smooth_combined_methylation_bsseq = BSmooth(
+    combined_methylation_bsseq,
+    ns = smooth_ns,
+    h = smooth_h,
+    BPPARAM = make_parallel_param(thread_number)
 )
-#准备输出文件
-#位置信息
-output_position = data.frame(granges(smooth_combined_methylation_bs))[,c(1,2,3)]
+
+# 输出坐标、平滑甲基化、原始甲基化和测序深度。
+# Export coordinates, smoothed methylation, raw methylation, and coverage.
+output_position = data.frame(granges(smooth_combined_methylation_bsseq))[, c(1, 2, 3)]
 output_position$end = output_position$end + 2
-#output_dataframe：位置、平滑的甲基化、原始甲基化、测序深度
 output_dataframe = data.frame(
-  output_position,
-  getMeth(smooth_combined_methylation_bs, type="smooth"),
-  getMeth(smooth_combined_methylation_bs, type="raw"),
-  getCoverage(smooth_combined_methylation_bs, type = "Cov")
+    output_position,
+    getMeth(smooth_combined_methylation_bsseq, type = "smooth"),
+    getMeth(smooth_combined_methylation_bsseq, type = "raw"),
+    getCoverage(smooth_combined_methylation_bsseq, type = "Cov")
 )
 output_dataframe$start = as.integer(output_dataframe$start)
 output_dataframe$end = as.integer(output_dataframe$end)
-#调整colnames
 colnames(output_dataframe) = c(
-  "chr", "start", "end",
-  paste0("smooth_", methylation_bed_file_dataframe$dataset_index),
-  paste0("raw_", methylation_bed_file_dataframe$dataset_index),
-  paste0("coverage_", methylation_bed_file_dataframe$dataset_index)
+    "chr", "start", "end",
+    paste0("smooth_", sample_info_dataframe$dataset_index),
+    paste0("raw_", sample_info_dataframe$dataset_index),
+    paste0("coverage_", sample_info_dataframe$dataset_index)
 )
-#输出文件
-if (! endsWith(output_methylation_file, ".gz")) {
-  output_methylation_file = paste0(output_methylation_file, ".gz")
-}
-fwrite(output_dataframe, file=output_methylation_file, sep="\t", quote=F, row.names=F, na="NA")
-print("Finish.")
+
+write_table(output_dataframe, output_methylation_file)
+message("Finish.")

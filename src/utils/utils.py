@@ -201,7 +201,7 @@ def output_dataframe(dataframe: pl.DataFrame, output_file: str | Path) -> Path:
     if data_suffix in {".tsv", ".txt", ".tab"}:
         dataframe.write_csv(output_path, separator="\t")
     elif data_suffix == ".feather":
-        dataframe.write_ipc(output_path)
+        dataframe.write_ipc(output_path, compression="zstd", compat_level=pl.CompatLevel.oldest())
     else:
         supported_suffixes = ".tsv, .txt, .tab, .tsv.gz, .txt.gz, .tab.gz, .feather"
         raise ValueError(

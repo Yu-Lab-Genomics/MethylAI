@@ -80,14 +80,14 @@ conda install pytorch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 pytorch-cuda=
 conda install pandas==2.3.3 polars==1.14.0 scipy
 conda install bedtools -c bioconda
 
-conda install r-base=4.3.3 r-data.table r-r.utils r-glue bioconductor-bsseq bioconductor-biocparallel -c conda-forge -c bioconda
+conda install r-base=4.3.3 r-arrow r-data.table r-r.utils r-glue bioconductor-bsseq bioconductor-biocparallel -c conda-forge -c bioconda
 ```
 
 If the final Conda command fails while downloading or installing the Bioconductor packages, use the following alternative method. First, install the basic R dependencies with Conda, and then install `bsseq` and its Bioconductor dependencies from within R. The example below uses the Tsinghua University TUNA mirror; it can be replaced with another available Bioconductor mirror if necessary.
 
 ```bash
 # Install the basic R environment and CRAN dependencies with Conda.
-conda install r-base=4.3.3 r-data.table r-r.utils r-glue -c conda-forge
+conda install r-base=4.3.3 r-arrow r-data.table r-r.utils r-glue -c conda-forge
 
 # Install the required Bioconductor packages using R.
 # R 4.3.x corresponds to Bioconductor 3.18.
@@ -269,7 +269,8 @@ python script/preprocess/preprocess_encode_data.py \
   --reference_cpg_coordinate_file data/genome/cpg_coordinate_hg38.chr1-22.sort.bed.gz
 ```
 
-**Expected Output:**
+Expected Output:
+
 - Preprocessed methylation files are written directly under `data/encode_preprocess`.
 - By default, each output file uses the suffix `.preprocessed.tsv`. If `--output_file_format feather` is used, the suffix is `.preprocessed.feather`.
 - Output columns are `chr`, `start`, `end` `mc`, and `cov`
@@ -281,7 +282,8 @@ python script/preprocess/preprocess_encode_data.py \
   - `preprocess_summary.tsv`: per-input-file processing summary, including input rows, retained rows, output rows, mc/cov sums before and after merging, notes, and status.
   - `preprocess_manifest.tsv`: manifest of generated files, including input path, output path, output format, row count, output columns, summary path, log path, and status.
 
-**Arguments**  
+Arguments:
+
 - `--input_folder`: Directory containing ENCODE WGBS files.
 - `--input_file_suffix`: Suffix used to identify input files, such as `.bed.gz`.
 - `--output_folder`: Directory where preprocessed methylation data files will be saved.
@@ -297,36 +299,81 @@ python script/preprocess/preprocess_encode_data.py \
 This step uses the BSmooth algorithm from the R package bsseq to calculate raw and smoothed methylation values for each CpG site from the mc and cov columns in the preprocessed files.
 
 ```bash
-Rscript src/preprocess/bsmooth.R \
+Rscript script/preprocess/bsmooth.R \
   data/encode_preprocess \
-  .preprocessed.txt \
+  .preprocessed.tsv \
   64 \
-  smooth_methylation_info.txt \
-  smooth_methylation_data.txt.gz \
+  data/encode_preprocess/smooth_methylation_info.tsv \
+  data/encode_preprocess/smooth_methylation_data.tsv.gz \
   35 \
   500
 ```
 
-**Expected Output:**
+Expected output:
 
-Two files will be generated in the `data/encode_preprocess` directory:
+- `data/encode_preprocess/smooth_methylation_info.tsv`: tab-separated file that maps each `dataset_index` to the original filename.
+- `data/encode_preprocess/smooth_methylation_data.tsv.gz`: gzip-compressed tab-separated file with a header. The columns are:
+  - Columns 1-3: CpG coordinates (`chr`, `start`, `end`).
+  - `smooth_{dataset_index}`: smoothed site methylation level.
+  - `raw_{dataset_index}`: raw site methylation level.
+  - `coverage_{dataset_index}`: read coverage at the CpG site.
 
-1. `smooth_methylation_info.txt`: tab‑separated file that maps each `dataset_index` to the original filename.
-2. `smooth_methylation_data.txt.gz`: compressed, tab‑separated file with a header. The columns are:
-   - Columns 1‑3: CpG coordinates (chr, start, end).
-   - Subsequent columns: For each sample (indexed by `dataset_index`), three columns are produced:
-     - `smooth_{dataset_index}`: Smoothed site methylation level.
-     - `raw_{dataset_index}`: Raw site methylation level.
-     - `coverage_{dataset_index}`: Read coverage at the CpG site.
+Arguments:
 
-**Arguments (positional)**  
-`1`: Directory containing preprocessed `.preprocessed.txt` files (output from previous step).  
-`2`: Suffix pattern to identify preprocessed files (default: `.preprocessed.txt`).  
-`3`: Number of CPU cores to utilize for parallel processing (adjust based on available hardware).  
-`4`: Output file that maps filenames to dataset indices.  
-`5`: Output file (gzipped) containing the raw and smoothed methylation values.  
-`6`: The minimum number of methylation loci in a smoothing window. (BSmooth parameter). **Do not modify for tutorial or reproducibility**.  
-`7`: The minimum smoothing window, in bases. (BSmooth parameter). **Do not modify for tutorial or reproducibility**.  
+- `1`: Directory containing preprocessed methylation files.
+- `2`: Suffix pattern used to identify preprocessed files, for example `.preprocessed.tsv`.
+- `3`: Number of CPU cores used for BSmooth.
+- `4`: Output sample information file.
+- `5`: Output methylation matrix file.
+- `6`: BSmooth `ns`, the minimum number of methylation loci in a smoothing window. **Do not modify for tutorial or reproducibility.**
+- `7`: BSmooth `h`, the minimum smoothing window in bases. **Do not modify for tutorial or reproducibility.**
+
+Supported formats:
+
+- Input and output formats are inferred from file suffixes. Supported dataframe formats are `txt`, `tsv`, and `feather`.
+- `.txt` and `.tsv` outputs are both tab-separated text files; they differ only in filename suffix. Gzip-compressed text output is supported with `.txt.gz` or `.tsv.gz`.
+- `.feather` uses Feather V2 with zstd compression.
+
+Optional large-dataset script:
+
+```bash
+Rscript script/preprocess/bsmooth_large_dataset.R \
+  data/encode_preprocess \
+  .preprocessed.tsv \
+  64 \
+  data/encode_preprocess/smooth_methylation_info.tsv \
+  data/encode_preprocess/smooth_methylation_data.tsv.gz \
+  35 \
+  500 \
+  50 \
+  data/encode_preprocess/bsmooth_checkpoint
+```
+
+Use `bsmooth_large_dataset.R` when processing many methylation files and the sample-combination step may take a long time.
+
+Additional arguments for `bsmooth_large_dataset.R`:
+
+- `8`: Checkpoint interval. A full RData checkpoint is saved every N samples during sample combination. Default: `50`.
+- `9`: Output RData checkpoint prefix. The script appends the number of combined datasets and `.RData` to this prefix, for example `bsmooth_checkpoint_50.RData`. Each checkpoint is saved as a separate file.
+- `10`: Optional input RData checkpoint file for resuming a failed run. If provided, the script loads this checkpoint and continues from the next unprocessed sample.
+
+If a run fails after a checkpoint is written, rerun with the checkpoint path as the 10th argument:
+
+```bash
+Rscript script/preprocess/bsmooth_large_dataset.R \
+  data/encode_preprocess \
+  .preprocessed.tsv \
+  64 \
+  data/encode_preprocess/smooth_methylation_info.resume.tsv \
+  data/encode_preprocess/smooth_methylation_data.resume.tsv.gz \
+  35 \
+  500 \
+  50 \
+  data/encode_preprocess/bsmooth_checkpoint \
+  data/encode_preprocess/bsmooth_checkpoint_50.RData
+```
+
+Note: Runtime errors are often caused by an abnormal WGBS dataset, for example a sample with no data at many CpG sites. In this situation, remove the problematic dataset and rerun BSmooth; otherwise, resuming from a checkpoint may encounter the same error again.
 
 #### 2.3. Generate train/validation/test dataset files
 
