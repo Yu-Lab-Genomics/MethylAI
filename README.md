@@ -377,70 +377,75 @@ Note: Runtime errors are often caused by an abnormal WGBS dataset, for example a
 
 #### 2.3. Generate train/validation/test dataset files
 
-This step performs quality control (QC) for each sample, calculates regional methylation levels, and produces the dataset files required for model training. **Note:** Because this step calculates regional methylation levels centered on ~27 million human CpG sites, it requires approximately 24 hours to complete.
+This step performs quality control (QC) for each sample, calculates regional methylation levels, and produces the dataset files required for model training. **Note:** Compared with v1.0.0, we optimized the algorithm for calculating regional methylation levels, reducing the runtime of this part to approximately 2 minutes.
 
 ```bash
-python -u src/preprocess/generate_dataset.py \
---smooth_methylation_file data/encode_preprocess/smooth_methylation_data.txt.gz \
---data_info_file data/encode_preprocess/smooth_methylation_info.txt \
---genome_fasta_file data/genome/hg38.fa \
---chrom_size_file data/genome/hg38.chrom.sizes \
---output_folder data/encode_dataset \
---output_prefix encode
-> data/encode_preprocess/generate_dataset.log 2>&1 &
+python -u script/preprocess/generate_dataset.py \
+  --smooth_methylation_file data/encode_preprocess/smooth_methylation_data.tsv.gz \
+  --data_info_file data/encode_preprocess/smooth_methylation_info.tsv \
+  --genome_fasta_file data/genome/hg38.fa \
+  --chrom_size_file data/genome/hg38.chrom.sizes \
+  --output_folder data/encode_dataset \
+  --output_prefix encode \
+  --complete_dataset_format tsv
 ```
 
-**Expected output:**  
+Expected output:
+
 Upon successful execution, the following files will be generated in the specified output folder (`data/encode_dataset` in this example):
 
-1. Complete Dataset File  
-- **File:** `encode_complete_dataset.txt`  
-- **Format:** Tab-separated values with header  
-- **Contents:**  
-  - Columns 1-3: BED-format CpG site coordinates (`chr`, `start`, `end`), sorted by chromosome and start position.
-  - Subsequent columns represent methylation levels, organized in three sections:
-    - **Smoothed site methylation levels**: Columns labeled as `smooth_{dataset_index}`
-    - **Raw site methylation levels**: Columns labeled as `raw_{dataset_index}`
-    - **Sequencing coverage**: Columns labeled as `coverage_{dataset_index}`
-    - **Regional methylation levels**: Columns labeled as `window_{window_size}_{dataset_index}` (window sizes: 1000 bp, 500 bp, 200 bp)  
-- **Purpose:** This comprehensive file contains data for all CpG sites and is intended for downstream analyses.
+1. Complete dataset
 
-2. Model Training Datasets  
-- **Files:** `encode_train_set.pkl`, `encode_validation_set.pkl`, `encode_test_set.pkl`  
-- **Format:** Python pickle objects.  
-- **Contents:** These files contain the training, validation, and test splits, respectively, partitioned by chromosome as specified by the `--training_chr`, `--validation_chr`, and `--test_chr` arguments.  
-- **Purpose:** Direct input for model training and evaluation pipelines.
+- `data/encode_dataset/encode_complete_dataset.tsv`
+- Tab-separated file with a header.
+- Columns include:
+  - BED-format CpG coordinates: `chr`, `start`, `end`.
+  - Input DNA helper columns: `input_dna_start`, `input_dna_end`, `chr_length`, `N_number`, `missing_sample`.
+  - Smoothed site methylation: `smooth_{dataset_index}`.
+  - Raw site methylation: `raw_{dataset_index}`.
+  - Sequencing coverage: `coverage_{dataset_index}`.
+  - Regional methylation: `window_{window_size}_{dataset_index}` for 1000 bp, 500 bp, and 200 bp windows.
+- If `--complete_dataset_format tsv.gz` is used, the complete dataset is written as `data/encode_dataset/encode_complete_dataset.tsv.gz`.
+- If `--complete_dataset_format feather` is used, the complete dataset is written as `data/encode_dataset/encode_complete_dataset.feather`.
 
-3. Dataset Information  
-- **File:** `encode_dataset_info.txt`  
-- **Format:** Tab-separated values with metadata.  
-- **Contents:**  
-  - Sample quality control (QC) statistics.  
-  - Mapping between `dataset_index`, `model_output_index`, and original filenames.
-- **Purpose:** Provides traceability between processed data and original samples, along with QC metrics for downstream interpretation.
+2. Model training datasets
 
-**Arguments (required)**  
-- `--smooth_methylation_file`: File containing raw and smoothed methylation values (output from previous step).  
-- `--data_info_file`: Sample information file (output from previous step).  
-- `--genome_fasta_file`: Reference genome FASTA file (must match the coordinate system used in methylation files).  
-- `--chrom_size_file`: Chromosome sizes file for the reference genome.  
-- `--output_folder`: Directory for storing generated dataset files.  
-- `--output_prefix`: Prefix for output filenames.  
+- `data/encode_dataset/encode_train_set.pkl`
+- `data/encode_dataset/encode_validation_set.pkl`
+- `data/encode_dataset/encode_test_set.pkl`
+- These files are Python pickle objects and are split by chromosome according to `--training_chr`, `--validation_chr`, and `--test_chr`.
 
-**Arguments (optional)**  
-- `--model_input_dna_length`: Length of DNA sequence used as model input (default: 18432). **Do not modify for tutorial or reproducibility**.  
-- `--threshold_min_coverage`: Minimum coverage threshold for defining high-quality CpG sites (default: 5). **Do not modify for tutorial or reproducibility**.  
-- `--threshold_max_missing_cpg_ratio`: Sample QC threshold; samples with low-quality CpG ratio exceeding this value are excluded (default: 0.5). **Do not modify for tutorial or reproducibility**.  
-- `--threshold_max_n_base_ratio`: CpG site QC threshold; sites with N-base ratio above this value in the extracted sequence are excluded (default: 0.02). **Do not modify for tutorial or reproducibility**.  
-- `--threshold_max_missing_sample_ratio`: CpG site QC threshold; sites with low-quality calls across samples exceeding this ratio are excluded (default: 0.5). **Do not modify for tutorial or reproducibility**.  
-- `--calculate_regional_methylation`: Window sizes (in bp) for regional methylation calculation (default: `1000 500 200`). Set `--calculate_regional_methylation 0` to disable this calculation. Note: Computing regional methylation for all ~27 million CpG sites requires approximately 24 hours. **Do not modify for tutorial or reproducibility**.  
-- `--quiet`: Suppress runtime messages when set.  
-- `--output_format`: Dataset output format; options: pickle or feather (default: `pickle`). **Do not modify for tutorial or reproducibility**.  
-- `--output_sampled_training_set`: Generates randomly sampled training subsets for rapid experimentation. Accepts one or more floating-point values between 0 and 1 (e.g., `0.1 0.2 0.5`) representing the sampling proportions relative to the full training set. This feature is disabled by default. **Do not set for full reproducibility**.  
-- `--output_slice_training_set`: Output each CpG site as a separate file to handle memory constraints. **Note: This mode requires >4 hours to complete**.  
-- `--training_chr`: Chromosomes for training set (default: `chr1  chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22`). **Do not modify for tutorial or reproducibility**.  
-- `--validation_chr`: Chromosomes for validation set (default: `chr10`). **Do not modify for tutorial or reproducibility**.  
-- `--test_chr`: Chromosomes for test set (default: `chr11`). **Do not modify for tutorial or reproducibility**.
+3. Dataset information and log
+
+- `data/encode_dataset/encode_dataset_info.tsv`
+  - Sample QC statistics and mapping between `dataset_index`, `model_output_index`, and original filenames.
+- `data/encode_dataset/encode_generate_dataset.log`
+  - Runtime log generated by logger.
+
+Arguments:
+
+- `--smooth_methylation_file`: File containing raw and smoothed methylation values from the previous step.
+- `--data_info_file`: Sample information file from the previous step.
+- `--genome_fasta_file`: Reference genome FASTA file matching the methylation coordinate system.
+- `--chrom_size_file`: Chromosome sizes file for the reference genome.
+- `--output_folder`: Directory for generated dataset files.
+- `--output_prefix`: Prefix for output filenames.
+- `--complete_dataset_format`: Complete dataset format, either `tsv`, `tsv.gz`, or `feather`. Default: `tsv`.
+- `--regional_methylation_dtype`: Numeric dtype used by prefix-sum regional methylation. Default: `float32`. Use `float64` only for reproducibility analysis; it noticeably increases runtime and memory use, while the expected numerical difference is only around `10^-7`.
+- `--model_input_dna_length`: Length of DNA sequence used as model input. Default: `18432`. Do not modify for tutorial or reproducibility.
+- `--threshold_min_coverage`: Minimum coverage threshold for defining high-quality CpG sites. Default: `5`. Do not modify for tutorial or reproducibility.
+- `--threshold_max_missing_cpg_ratio`: Sample QC threshold. Default: `0.5`. Do not modify for tutorial or reproducibility.
+- `--threshold_max_n_base_ratio`: CpG site QC threshold for N bases in the extracted sequence. Default: `0.02`. Do not modify for tutorial or reproducibility.
+- `--threshold_max_missing_sample_ratio`: CpG site QC threshold for low-quality calls across samples. Default: `0.5`. Do not modify for tutorial or reproducibility.
+- `--calculate_regional_methylation`: Window sizes in bp for regional methylation. Default: `1000 500 200`. Set `--calculate_regional_methylation 0` to disable this calculation. Do not modify for tutorial or reproducibility.
+- `--quiet`: Suppress runtime messages when set.
+- `--output_sampled_training_set`: Generate randomly sampled training subsets for rapid experimentation. Disabled by default. Do not set for full reproducibility.
+- `--output_slice_training_set`: Output each training CpG site as a separate pickle file. This mode can take a long time and creates many files.
+- `--training_chr`: Chromosomes for training set. Default: `chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22`.
+- `--validation_chr`: Chromosomes for validation set. Default: `chr10`.
+- `--test_chr`: Chromosomes for test set. Default: `chr11`.
+- `--log_file`: Optional log file path. Default: `<output_folder>/<output_prefix>_generate_dataset.log`.
+- `--overwrite`: Allow overwriting existing output files. Use only when intentionally rerunning into the same output path.
 
 ### 3. Fine-tune the Model
 
@@ -476,11 +481,11 @@ After configuring the parameters in `config/finetune_tutorial_encode.py`, execut
 CUDA_VISIBLE_DEVICES=0,1,2,3 OMP_NUM_THREADS=4 \
 nohup torchrun --standalone --nproc_per_node=gpu \
 src/training/finetune.py \
---config_file config/finetune_tutorial_encode.py \
---config_dict_name methylai_config_dict \
---print_loss_step 500 \
---print_model_output_step 5000 \
-> result/finetune_tutorial_encode.log 2>&1 &
+  --config_file config/finetune_tutorial_encode.py \
+  --config_dict_name methylai_config_dict \
+  --print_loss_step 500 \
+  --print_model_output_step 5000 \
+  > result/finetune_tutorial_encode.log 2>&1 &
 ```
 
 **Environment Setting**  
